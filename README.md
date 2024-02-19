@@ -16,6 +16,9 @@ Además, hay que cambiar dos líneas del código fuente de MiVOLO:
 * robot_vision/src/mivolo/mivolo/structures.py -> comentar línea 14: # os.unsetenv("CUBLAS_WORKSPACE_CONFIG")
 * robot_vision/src/mivolo/mivolo/models/yolo_detector.py -> comentar línea 12: # os.unsetenv("CUBLAS_WORKSPACE_CONFIG")
 
+Para los pesos de los modelos hay que crear una carpeta "models" dentro de robot_vision/robot_vision, y ponerlos ahí.
+Para la tarea de reconocimiento facial hay que crear una carpeta "user_faces" dentro de robot_vision/robot_vision, y poner ahí las imágenes de los usuarios a reconocer. 
+
 ## Instrucciones para usar el módulo de visión en tiempo real
 
 1. Ir a carpeta robot_vision/vision_module.
