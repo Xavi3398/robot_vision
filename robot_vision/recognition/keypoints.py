@@ -95,7 +95,7 @@ class SPIGAKeypoints(Keypoints):
 
 
 class InsightFaceKeypoints(Keypoints):
-    """ Only face detection. Model: buffalo_l: SCRFD-10GF for detection and ResNet50@WebFace600K for recognition.
+    """ Only face detection. Model: buffalo_l: SCRFD-10GF for detection, ResNet50@WebFace600K for recognition, MobileNet for age_gender and facial keypoints.
 
     Github: https://github.com/deepinsight/insightface
     """

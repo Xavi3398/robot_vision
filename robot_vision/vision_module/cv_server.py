@@ -84,7 +84,7 @@ def receive_frame(img_64_in, new_task, new_method, mode='plot'):
             img_64_out = services.image_to_base64(plot_img)
             emit('sendPlot', (img_64_out))
         elif mode == 'text':
-            emit('sendText', (result))
+            emit('sendText', (str(result)))
 
 if __name__ == "__main__":
     print('Running server at http://localhost:'+str(port))

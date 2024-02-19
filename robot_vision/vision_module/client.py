@@ -31,6 +31,14 @@ def ask_recognitions():
 
     print('Starting AI Recognition module')
 
+    choice = 0
+    while choice != 1 and choice != 2:
+        print('\nAvailable modes:'+
+            '\n1 - Plot recognitions in real time.'+
+            '\n2 - Return recognitions as text.')
+        choice = int(input('\nChoose mode: '))
+    mode = 'plot' if choice == 1 else 'text'
+
     while not RecordingInfo.end:
         print('\nAvailable tasks:')
         print(get_as_options(list(PREDEFINED_RECOGNIZERS.keys())))
@@ -44,7 +52,7 @@ def ask_recognitions():
 
         print('\nStarting recording. Press "q" to stop.\n')
 
-        record_and_send_webcam(task, method)
+        record_and_send_webcam(task, method, mode)
 
         continue_recognition = ''
         while continue_recognition not in ['y', 'n', 'yes', 'no']:
@@ -54,7 +62,7 @@ def ask_recognitions():
             RecordingInfo.end = True
 
 
-def record_and_send_webcam(task, method):
+def record_and_send_webcam(task, method, mode):
     RecordingInfo.stop_video_feed = False
     cam = cv2.VideoCapture(0)
 
@@ -74,7 +82,7 @@ def record_and_send_webcam(task, method):
             
             # send to server
             img_64_out = services.image_to_base64(frame)
-            sio.emit('sendFrame', (img_64_out, task, method, 'plot'), namespace='/videoStream')
+            sio.emit('sendFrame', (img_64_out, task, method, mode), namespace='/videoStream')
 
     # Release resources
     cam.release()
@@ -82,7 +90,6 @@ def record_and_send_webcam(task, method):
 
 @sio.on('sendPlot', namespace='/videoStream')
 def receive_and_show_plot(img_64_in):
-    print('Processed image received.')
     img = services.base64_to_image(img_64_in)
     RecordingInfo.processed_frame = img
 

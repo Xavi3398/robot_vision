@@ -130,19 +130,10 @@ six==1.16.0
 -e git+https://github.com/andresprados/SPIGA.git@a709c95cc93f8246d7bff4cfb970a2dd0d62ffed#egg=spiga
 stack-data==0.6.3
 sympy==1.12
-tensorboard==2.10.1
-tensorboard-data-server==0.6.1
-tensorboard-plugin-wit==1.8.1
-tensorflow==2.10.0
-tensorflow-estimator==2.10.0
-tensorflow-io-gcs-filesystem==0.31.0
 termcolor==2.4.0
 threadpoolctl==3.2.0
 tifffile==2023.7.10
 timm==0.8.13.dev0
-torch==2.2.0+cu118
-torchaudio==2.2.0+cu118
-torchvision==0.17.0+cu118
 tornado==6.4
 tqdm==4.66.1
 traitlets==5.14.1
