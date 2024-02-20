@@ -6,10 +6,12 @@ from scipy import ndimage
 
 
 def show_img(img: np.ndarray):
+    plt.axis('off')
     if len(img.shape) > 1:
         plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     else:
         plt.imshow(cv2.cvtColor(img, cv2.COLOR_GRAY2RGB))
+    plt.show()
 
 def draw_bbox(img: np.ndarray, bbox, color=[255,0,0], thickness=2):
     bbox = bbox.astype('int')
@@ -24,8 +26,17 @@ def draw_keypoints(img: np.ndarray, keypoints, color=[255,0,0], radius=3, thickn
         img = cv2.circle(img, (int(kp[0]), int(kp[1])), radius=radius, color=color, thickness=thickness)
     return img
 
-def draw_text(img: np.ndarray, point, text, color=[255,0,0], thickness=1, font=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1):
-    return cv2.putText(img, text, point, font, fontScale, color, thickness, cv2.LINE_AA)
+def draw_text(img: np.ndarray, point, text, color=(255, 0, 0), color_bg=(255, 255, 255), thickness=2, font=cv2.FONT_HERSHEY_PLAIN, fontScale=2):
+    x, y = point
+
+    text_size, _ = cv2.getTextSize(text, font, fontScale, thickness)
+    text_w, text_h = text_size
+    padding = .5 * text_h
+
+    cv2.rectangle(img, (point[0], int(point[1] + padding/2)), (int(x + text_w), int(y - text_h - padding/2)), color_bg, -1)
+    cv2.putText(img, text, point, font, fontScale, color, thickness)
+
+    return img
 
 def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None, expression=None, user_face=None):
 
@@ -69,7 +80,7 @@ def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None,
     # Age & Gender
     if age is not None or gender is not None or expression is not None:
         
-        font_factor = img.shape[1]/400
+        font_factor = img.shape[1]/300
         point_factor = img.shape[1]//300
 
         elements = []
@@ -85,7 +96,7 @@ def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None,
             point = [10, 10]
         else:
             point = bbox[:2].astype('int')
-        img = draw_text(img, [point[0]+5*point_factor, point[1]+25*point_factor], text, fontScale=font_factor)
+        img = draw_text(img, [point[0]+5*point_factor, point[1]+15*point_factor], text, fontScale=font_factor)
     
     # RGB to BGR
     img = img[:,:,::-1]
