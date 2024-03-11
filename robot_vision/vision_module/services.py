@@ -55,6 +55,35 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
         # Put the result in the output queue
         output_results.put((result, plot_img))
 
+# Versió anterior
+# def image_to_base64(img):
+
+#     # Encode the processed image as a JPEG-encoded base64 string
+#     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+#     _, frame_encoded = cv2.imencode(".jpg", img, encode_param)
+#     processed_img_data = base64.b64encode(frame_encoded).decode()
+
+#     # Prepend the base64-encoded string with the data URL prefix
+#     b64_src = "data:image/jpg;base64,"
+#     processed_img_data = b64_src + processed_img_data
+#     return processed_img_data
+
+
+# def base64_to_image(base64_string):
+
+#     # Extract the base64 encoded binary data from the input string
+#     base64_data = base64_string.split(",")[1]
+
+#     # Decode the base64 data to bytes
+#     image_bytes = base64.b64decode(base64_data)
+
+#     # Convert the bytes to numpy array
+#     image_array = np.frombuffer(image_bytes, dtype=np.uint8)
+
+#     # Decode the numpy array as an image using OpenCV
+#     image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+#     return image
+
 
 def image_to_base64(img):
 
@@ -62,17 +91,10 @@ def image_to_base64(img):
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
     _, frame_encoded = cv2.imencode(".jpg", img, encode_param)
     processed_img_data = base64.b64encode(frame_encoded).decode()
-
-    # Prepend the base64-encoded string with the data URL prefix
-    b64_src = "data:image/jpg;base64,"
-    processed_img_data = b64_src + processed_img_data
     return processed_img_data
 
 
-def base64_to_image(base64_string):
-
-    # Extract the base64 encoded binary data from the input string
-    base64_data = base64_string.split(",")[1]
+def base64_to_image(base64_data):
 
     # Decode the base64 data to bytes
     image_bytes = base64.b64decode(base64_data)

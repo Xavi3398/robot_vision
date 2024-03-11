@@ -162,3 +162,4 @@ cython_debug/
 src/
 robot_vision/models/
 robot_vision/user_faces/
+robot_vision/models.zip

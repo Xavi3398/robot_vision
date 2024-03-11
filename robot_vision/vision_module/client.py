@@ -3,11 +3,14 @@ import cv2
 import socketio #python-socketio by @miguelgrinberg
 import services
 import threading
+import requests
 
 from robot_vision.recognition.predefined import PREDEFINED_RECOGNIZERS
 
+base_url = 'http://localhost:8080'
+
 sio = socketio.Client()
-sio.connect('http://localhost:8080', namespaces='/videoStream')
+sio.connect(base_url, namespaces='/videoStream')
 
 
 @sio.event
@@ -31,15 +34,20 @@ def ask_recognitions():
 
     print('Starting AI Recognition module')
 
-    choice = 0
-    while choice != 1 and choice != 2:
-        print('\nAvailable modes:'+
-            '\n1 - Plot recognitions in real time.'+
-            '\n2 - Return recognitions as text.')
-        choice = int(input('\nChoose mode: '))
-    mode = 'plot' if choice == 1 else 'text'
-
     while not RecordingInfo.end:
+
+        choice = 0
+        while choice not in [1,2,3,4]:
+            print('\nAvailable modes:'+
+                '\n1 - (video stream): Plot recognitions in real time.'+
+                '\n2 - (video stream): Return recognitions as text.'+
+                '\n3 - (screen capture): Plot recognitions in real time.'+
+                '\n4 - (screen capture): Return recognitions as text.')
+            choice = int(input('\nChoose mode: '))
+
+        stream_mode = 'video' if choice in [1,2] else 'image'
+        mode = 'plot' if choice in [1,3] else 'text'
+
         print('\nAvailable tasks:')
         print(get_as_options(list(PREDEFINED_RECOGNIZERS.keys())))
         choice = int(input('\nIntroduce a task: ')) - 1
@@ -50,9 +58,16 @@ def ask_recognitions():
         choice = int(input('\nIntroduce a method: ')) - 1
         method = list(PREDEFINED_RECOGNIZERS[task].keys())[choice if choice > 0 else 0]
 
-        print('\nStarting recording. Press "q" to stop.\n')
+        # Clear buffer of frames of server. No funciona bien
+        # response = requests.post(base_url+'/cleanBuffer')
+        # print(response.text)
 
-        record_and_send_webcam(task, method, mode)
+        print('\nStarting recording. Press "q" or RIGHT MOUSE BUTTON to stop.\n')
+
+        if stream_mode == 'image':
+            print('Press LEFT MOUSE BUTTON for screen capture.\n')
+
+        record_and_send_webcam(task, method, mode, stream_mode)
 
         continue_recognition = ''
         while continue_recognition not in ['y', 'n', 'yes', 'no']:
@@ -61,28 +76,50 @@ def ask_recognitions():
         if continue_recognition not in['y', 'yes']:
             RecordingInfo.end = True
 
+    # Close OpenCV windows
+    if RecordingInfo.showingRecordingWindow:
+        cv2.waitKey(1)
+        cv2.destroyWindow('Recording')
+    
+    return
 
-def record_and_send_webcam(task, method, mode):
+
+
+def record_and_send_webcam(task, method, mode, stream_mode):
+
     RecordingInfo.stop_video_feed = False
     cam = cv2.VideoCapture(0)
 
     while (not RecordingInfo.stop_video_feed):
 
         # get frame from webcam
-        ret, frame = cam.read()                     
+        ret, frame = cam.read()
 
         # Close
-        if RecordingInfo.stop_video_feed or not ret or (cv2.waitKey(1) & 0xFF == ord('q')):
+        if RecordingInfo.stop_video_feed or(cv2.waitKey(1) & 0xFF == ord('q')):
             RecordingInfo.stop_video_feed = True
         
-        else:
-            # Show recording
-            if RecordingInfo.showRecording:
-                cv2.imshow('Recording', frame) 
+        # Show recording
+        if RecordingInfo.showRecording:
+            cv2.imshow('Recording', frame) 
             
-            # send to server
+            if not RecordingInfo.showingRecordingWindow:
+                RecordingInfo.showingRecordingWindow = True
+                cv2.setMouseCallback('Recording',mouseEvent)
+        
+        # send to server
+        if stream_mode == 'video':
             img_64_out = services.image_to_base64(frame)
             sio.emit('sendFrame', (img_64_out, task, method, mode), namespace='/videoStream')
+        elif RecordingInfo.capture:
+            RecordingInfo.capture = False
+            img_64_out = services.image_to_base64(frame)
+            response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+mode, data=img_64_out, headers={'content-type': 'image/jpg'})
+            if mode == 'plot':
+                img_response = services.base64_to_image(response.text)
+                RecordingInfo.processed_frame = img_response
+            elif mode == 'text':
+                print(response.text)
 
     # Release resources
     cam.release()
@@ -97,9 +134,17 @@ def receive_and_show_plot(img_64_in):
 @sio.on('sendText', namespace='/videoStream')
 def receive_and_show_text(message):
     print('Result received: ' + message)
+    
+
+def mouseEvent(event,x,y,flags,param):
+    if event == cv2.EVENT_LBUTTONUP:
+        RecordingInfo.capture = True
+    if event == cv2.EVENT_RBUTTONUP:
+        RecordingInfo.stop_video_feed = True
 
 
 def show_processed_feed():
+        
     while (not RecordingInfo.end):
         
         if RecordingInfo.stop_video_feed:
@@ -112,8 +157,50 @@ def show_processed_feed():
 
             # Show recording
             if RecordingInfo.processed_frame is not None and not RecordingInfo.stop_video_feed:
+
                 cv2.imshow('Processing', RecordingInfo.processed_frame)
+                
+                if not RecordingInfo.showingProcessingWindow:
+                    RecordingInfo.showingProcessingWindow = True
+                    cv2.setMouseCallback('Processing',mouseEvent)
         
+    # Close OpenCV windows
+    if RecordingInfo.showingProcessingWindow:
+        cv2.waitKey(1)
+        cv2.destroyWindow('Processing') 
+    
+    return
+            
+
+
+# def example_send_img():
+
+#     # prepare headers for http request
+#     content_type = 'image/jpeg'
+#     headers = {'content-type': content_type}
+
+#     img = cv2.imread('C:/Users/Xavi/OneDrive - Universitat de les Illes Balears/Doctorat/Computer Vision Module/robot_vision/notebooks/images/happiness.png')
+#     # encode image as jpeg
+#     _, img_encoded = cv2.imencode('.jpg', img)
+#     # send http request with image and receive response
+#     response = requests.post('http://localhost:8080/sendImage?task=face_detection&method=YOLOv8&mode=text', data=img_encoded.tobytes(), headers=headers)
+#     # decode response
+#     print(response.text)
+
+
+# def example_send_img():
+
+#     img_64_out = services.image_to_base64_2(img)
+
+#     # send http request with image and receive response
+#     response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+mode, data=img_64_out, headers={'content-type': 'image/jpg'})
+    
+#     if mode == 'plot':
+#         img_response = services.base64_to_image2(response.text)
+#         plotting.show_img(img_response)
+#     elif mode == 'text':
+#         print(response.text)
+
 
 class RecordingInfo:
     showRecording = True
@@ -121,6 +208,9 @@ class RecordingInfo:
     stop_video_feed = False
     processed_frame = None
     end = False
+    showingRecordingWindow = False
+    showingProcessingWindow = False
+    capture = False
 
 
 if __name__ == "__main__":
@@ -136,11 +226,9 @@ if __name__ == "__main__":
     # Wait for the threads to finish
     # record_thread.join()
     # if RecordingInfo.showProcessed:
-        # show_processed_thread.join()
+    #     show_processed_thread.join()
 
+    # To allow Ctrl+C
     while record_thread.is_alive() or show_processed_thread.is_alive():
         sleep(100)
-
-    # Close OpenCV windows
-    cv2.waitKey(1)
-    cv2.destroyAllWindows()   
+    print('acabat')
