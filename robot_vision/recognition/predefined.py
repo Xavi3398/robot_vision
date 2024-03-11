@@ -80,9 +80,7 @@ def predefined_facial_expression_recognition_Keras(model_name):
     return facial_expression.KerasFacialExpressionRecognizer(
             model_name=model_name,
             weights=os.path.join(MODELS_FOLDER, 'expression_recognition', model_name+'_CV1_weights.h5'),
-            keypoints_detector=keypoints.SPIGAKeypoints(
-                face_detector=PREDEFINED_RECOGNIZERS['face_detection'][list(PREDEFINED_RECOGNIZERS['face_detection'].keys())[0]](),
-                mode='5'))
+            keypoints_detector=keypoints.InsightFaceKeypoints(mode='5'))
 
 def predefined_facial_expression_recognition_AlexNet():
     return predefined_facial_expression_recognition_Keras('AlexNet')
