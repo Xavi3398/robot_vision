@@ -15,7 +15,7 @@ predefined.USER_FACES_FOLDER = '../user_faces'
 
 def process_images(conn: Connection, input_frames: Queue, output_results: Queue):
     
-    print('------ AI THREAD: Start -------')
+    print('------- AI THREAD: Start -------')
 
     # To start, wait until we receive a task and method. MAY BLOCK UNTIL WE RECEIVE ELEMENTS
     task, method, plot = conn.recv()
@@ -28,7 +28,7 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
             new_task, new_method, plot = conn.recv()
 
             if new_task != task or new_method != method:
-                print('------ AI THREAD: Changing recognizer -------')
+                print('------- AI THREAD: Changing recognizer -------')
                 recognizer = predefined.predefined_selector(new_task, new_method)
             
             task = new_task
@@ -37,12 +37,19 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
         # Get frame from the input queue. MAY BLOCK UNTIL THERE ARE ELEMENTS
         img = input_frames.get()
             
-        print('------ AI THREAD: New computation -------')
+        print('------- AI THREAD: New computation -------')
 
-        result = recognizer.get_result(img)
+        try:
+            result = recognizer.get_result(img)
+        except Exception as error:
+            print('------- AI THREAD: Error in recognition: -------')
+            print(error)
+            print('------- AI THREAD: End of error -------')
 
-        # Return only recognition
-        if plot:
+            result = None
+
+        # Return also plot or not
+        if result is not None and plot:
             plot_img = recognizer.get_plot_result(img, result)
         else:
             plot_img = None

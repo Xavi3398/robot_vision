@@ -52,6 +52,10 @@ def sendImage():
     # Get frame from the background, blocking.
     result, plot_img = output_results.get()
 
+    if result is None:
+        print('Error in recognition!')
+        return 'error in recognition!', 500
+
     if mode == 'plot':
         img_64_out = services.image_to_base64(plot_img)
         return img_64_out
