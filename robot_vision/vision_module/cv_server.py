@@ -10,6 +10,7 @@ from robot_vision.vision_module import services
 
 app = Flask(__name__)
 sio = SocketIO(app, namespaces='/videoStream')
+ip = '127.0.0.1'
 port = 8080
 
 MODES = ['plot', 'text']
@@ -28,12 +29,17 @@ def home():
 
 @app.route("/sendImage", methods=['POST'])
 def sendImage():
+    
+    print('Image received.')
 
     new_task = request.args.get('task', type = str)
     new_method = request.args.get('method', type = str)
     mode = request.args.get('mode', default='text', type = str)
 
-    print('Image received.')
+    if new_task is None or new_method is None:
+        print('No task or method specified!')
+        return 'bad request!', 400
+
     img_64_in = request.data
     img = services.base64_to_image(img_64_in)
 
@@ -51,16 +57,6 @@ def sendImage():
         return img_64_out
     elif mode == 'text':
         return str(result)
-
-
-# @app.route("/cleanBuffer", methods=['POST'])
-# def cleanBuffer():
-#     while not input_frames.empty():
-#         input_frames.get_nowait()
-
-#     while not output_results.empty():
-#         output_results.get_nowait()
-#     return "Good"
 
 
 @sio.on("connect")
@@ -133,7 +129,7 @@ def put_image_in_queue(img):
     lock.release()
 
 if __name__ == "__main__":
-    print('Running server at http://localhost:'+str(port))
+    print('Running server at http://'+ip+':'+str(port))
 
     # Background process to run intensive tasks
     task = None
@@ -145,5 +141,5 @@ if __name__ == "__main__":
     b_process.start()
 
     # gevent server
-    http_server = WSGIServer(('', port), app)
+    http_server = WSGIServer((ip, port), app)
     http_server.serve_forever()

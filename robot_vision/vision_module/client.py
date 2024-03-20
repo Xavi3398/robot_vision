@@ -7,7 +7,7 @@ import requests
 
 from robot_vision.recognition.predefined import PREDEFINED_RECOGNIZERS
 
-base_url = 'http://localhost:8080'
+base_url = 'http://127.0.0.1:8080'
 
 sio = socketio.Client()
 sio.connect(base_url, namespaces='/videoStream')
@@ -105,7 +105,7 @@ def record_and_send_webcam(task, method, mode, stream_mode):
             
             if not RecordingInfo.showingRecordingWindow:
                 RecordingInfo.showingRecordingWindow = True
-                cv2.setMouseCallback('Recording',mouseEvent)
+                cv2.setMouseCallback('Recording', mouseEvent)
         
         # send to server
         if stream_mode == 'video':
@@ -170,36 +170,6 @@ def show_processed_feed():
         cv2.destroyWindow('Processing') 
     
     return
-            
-
-
-# def example_send_img():
-
-#     # prepare headers for http request
-#     content_type = 'image/jpeg'
-#     headers = {'content-type': content_type}
-
-#     img = cv2.imread('C:/Users/Xavi/OneDrive - Universitat de les Illes Balears/Doctorat/Computer Vision Module/robot_vision/notebooks/images/happiness.png')
-#     # encode image as jpeg
-#     _, img_encoded = cv2.imencode('.jpg', img)
-#     # send http request with image and receive response
-#     response = requests.post('http://localhost:8080/sendImage?task=face_detection&method=YOLOv8&mode=text', data=img_encoded.tobytes(), headers=headers)
-#     # decode response
-#     print(response.text)
-
-
-# def example_send_img():
-
-#     img_64_out = services.image_to_base64_2(img)
-
-#     # send http request with image and receive response
-#     response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+mode, data=img_64_out, headers={'content-type': 'image/jpg'})
-    
-#     if mode == 'plot':
-#         img_response = services.base64_to_image2(response.text)
-#         plotting.show_img(img_response)
-#     elif mode == 'text':
-#         print(response.text)
 
 
 class RecordingInfo:
