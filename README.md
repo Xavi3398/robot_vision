@@ -39,8 +39,11 @@ Hay que añadir manualmente los pesos de SPIGA porque no se descargan bien autom
 * Copiar robot_vision/robot_vision/models/spiga_wflw.pt en robot_vision/src/spiga/spiga/models/weights
 
 Si no se usa CUDA, hay que eliminar su uso en el paquete de SPIGA (archivo src/spiga/spiga/inference/framework.py):
-    * Comentar línea 45: self.model = self.model.cuda(gpus[0])
-    * Cambiar línea 136: data_var = data.cuda(device=self.gpus[0], non_blocking=True) por data_var = data
+* Comentar línea 45: self.model = self.model.cuda(gpus[0])
+* Cambiar línea 136: data_var = data.cuda(device=self.gpus[0], non_blocking=True) por data_var = data
+
+Si no se usa CUDA, cambiar también llamada a MiVOLO:
+* En archivo robot_vision/recognition/predefined.py, función predefined_age_gender_MiVOLO(), añadir device='cpu' a la llamada a age_gender.MiVOLOAgeGender
 
 ## Instrucciones para usar el módulo de visión en tiempo real
 
