@@ -2,6 +2,7 @@
 import base64
 import numpy as np
 import cv2
+import traceback 
 
 from multiprocessing import Process, Pipe, Queue, Lock
 from multiprocessing.connection import Connection
@@ -44,6 +45,7 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
         except Exception as error:
             print('------- AI THREAD: Error in recognition: -------')
             print(error)
+            print(traceback.print_exc() )
             print('------- AI THREAD: End of error -------')
 
             result = None

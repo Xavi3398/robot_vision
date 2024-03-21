@@ -114,12 +114,21 @@ def record_and_send_webcam(task, method, mode, stream_mode):
         elif RecordingInfo.capture:
             RecordingInfo.capture = False
             img_64_out = services.image_to_base64(frame)
-            response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+mode, data=img_64_out, headers={'content-type': 'image/jpg'})
-            if mode == 'plot':
-                img_response = services.base64_to_image(response.text)
-                RecordingInfo.processed_frame = img_response
-            elif mode == 'text':
-                print(response.text)
+
+            try:
+                response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+mode, data=img_64_out, headers={'content-type': 'image/jpg'})
+
+                # Check if response errors
+                response.raise_for_status()
+
+                if mode == 'plot':
+                    img_response = services.base64_to_image(response.text)
+                    RecordingInfo.processed_frame = img_response
+                elif mode == 'text':
+                    print(response.text)
+
+            except Exception as error:
+                print('Response error:', error)
 
     # Release resources
     cam.release()
