@@ -1,3 +1,4 @@
+
 # Robot Vision
 
 Módulo de visión para cualquier robot.
@@ -45,11 +46,76 @@ Si no se usa CUDA, hay que eliminar su uso en el paquete de SPIGA (archivo src/s
 Si no se usa CUDA, cambiar también llamada a MiVOLO:
 * En archivo robot_vision/recognition/predefined.py, función predefined_age_gender_MiVOLO(), añadir device='cpu' a la llamada a age_gender.MiVOLOAgeGender
 
-## Instrucciones para usar el módulo de visión en tiempo real
+## Instrucciones para usar el módulo de visión
 
+### Arrancar el módulo, junto con el programa cliente de prueba
 1. Ir a carpeta robot_vision/vision_module.
 2. Ejecutar 'python cv_server.py' para iniciar el servidor.
 3. Ejecutar (en otra terminal) 'python client.py' para iniciar un cliente de prueba, que graba vídeo desde la webcam y lo envía al servidor para que lo procese. Se puede elegir entre diferentes tareas y métodos. Para parar reconocimiento y cambiar de tarea/método hay que pulsar botón derecho del ratón o 'q' con el focus puesto en la ventana de la cámara (no en la terminal), y luego escribir 'y' en la terminal para continuar o 'n' para parar.
 4. Si se ha seleccionado el modo imagen en vez de vídeo, sólo se procesan las capturas de pantalla, no todo el vídeo. Para hacer una captura de pantalla, hacer click izquierdo con el ratón en la ventana de la grabación.
 
 Para parar tanto el servidor como el cliente es necesario usar Ctrl+c repetidas veces en las consolas de comandos, debido a la ejecución multiproceso. Esto se arreglará en una versión futura.
+
+### Peticiones:
+El módulo, tal como está configurado, contesta peticiones en http://127.0.0.1:8080 (localhost, puerto 8080). Acepta dos clases de peticiones:
+
+ - POST de una imagen (modo imagen).
+ - Mensajes a través de sockets con fotogramas a procesar (modo vídeo)
+
+#### Modo imagen
+
+Petición POST a http://127.0.0.1:8080/sendImage. Este modo está pensado para procesar imágenes a petición (no en tiempo real). Por ejemplo, hacer una captura de pantalla en un momento determinado y procesarla para identificar el usuario delante de la cámara.
+
+Parámetros con nombre:
+
+ - **task**: tarea a realizar. Disponibles: *'face_detection', 'person_detection', 'keypoints', 'expression', 'age_gender', 'face_recognition', 'background_subtraction'*.
+ - **method**: método a utilizar. Depende de la tarea. Ver diccionario PREDEFINED_RECOGNIZERS en robot_vision/recognition/predefined.py para la lista completa.
+ - **mode**: tipo de respuesta de la petición. Disponibles: *'text'* (devuelve texto con el resultado del reconocimiento), *'plot'* (devuelve la imagen de entrada con el resultado pintado encima).
+
+Cuerpo del POST: la imagen a procesar, en bytes, comprimida en jpg y en base 64.
+
+#### Modo vídeo en tiempo real
+
+Envío de mensajes a través de sockets a http://127.0.0.1:8080/videoStream/sendFrame (namespace='/videoStream'). Pensado para enviar vídeo en tiempo real. Parámetros (sin nombre):
+
+- la imagen a procesar, en bytes, comprimida en jpg y en base 64.
+- tarea a realizar. Disponibles: *'face_detection', 'person_detection', 'keypoints', 'expression', 'age_gender', 'face_recognition', 'background_subtraction'*.
+- método a utilizar. Depende de la tarea. Ver diccionario PREDEFINED_RECOGNIZERS en robot_vision/recognition/predefined.py para la lista completa.
+- tipo de respuesta de la petición. Disponibles: *'text'* (devuelve texto con el resultado del reconocimiento), *'plot'* (devuelve la imagen de entrada con el resultado pintado encima).
+
+Los resultados del reconocimiento se emiten, también a través de sockets, en:
+
+- http://IP_CLIENTE:PUERTO_CLIENTE/videoStream/sendPlot si el modo es *'plot'*.
+- http://IP_CLIENTE:PUERTO_CLIENTE/videoStream/sendText, si el modo es *'text'*.
+
+## Tareas y modelos disponibles
+
+| Task              | Year          | Method                   | Implementation                                              |
+|-------------------|---------------|--------------------------|-------------------------------------------------------------|
+| Face detection    | 2023          | YOLOv8                   | [Official code](https://github.com/ultralytics/ultralytics) |
+|                   | 2021          | SCRFD                    | [InsightFace](https://github.com/deepinsight/insightface)   |
+|                   | 2016          | MTCNN                    | [TensorFlow](https://github.com/ipazc/mtcnn)                |
+|                   | 2005          | HOG + SVM                | [DLIB](http://dlib.net/python)                              |
+|                   | 2001          | Viola-Jones (face)       | [OpenCV](https://docs.opencv.org/3.4)                       |
+| Face recognition  | 2015          | ResNet50                 | [InsightFace](https://github.com/deepinsight/insightface)   |
+| Person detection  | 2023          | YOLOv8                   | [Official code](https://github.com/ultralytics/ultralytics) |
+| Facial landmarks  | 2022          | SPIGA                    | [Official code](https://github.com/andresprados/SPIGA)      |
+|                   | 2017          | MobileNet                | [InsightFace](https://github.com/deepinsight/insightface)   |
+|                   | 2016          | MTCNN                    | [TensorFlow](https://github.com/ipazc/mtcnn)                |
+|                   | 2014          | Regression Trees         | [DLIB](http://dlib.net/python)                              |
+|                   | 2001          | Viola-Jones (eyes)       | [OpenCV](https://docs.opencv.org/3.4)                       |
+| Age and gender    | 2023          | MiVOLO                   | [Official code](https://github.com/WildChlamydia/MiVOLO)    |
+|                   | 2017          | MobileNet                | [InsightFace](https://github.com/deepinsight/insightface)   |
+| Expression recognition   | 2022   | SilNet                   | [Keras](https://keras.io/api/applications)                  |
+|                   | 2021          | EfficientNetV2           | [Keras](https://keras.io/api/applications)                  |
+|                   | 2019          | MobileNetV3              | [Keras](https://keras.io/api/applications)                  |
+|                   | 2017          | Xception                 | [Keras](https://keras.io/api/applications)                  |
+|                   | 2015          | InceptionV3              | [Keras](https://keras.io/api/applications)                  |
+|                   | 2015          | ResNet50                 | [Keras](https://keras.io/api/applications)                  |
+|                   | 2015          | ResNet101V2              | [Keras](https://keras.io/api/applications)                  |
+|                   | 2015          | VGG16                    | [Keras](https://keras.io/api/applications)                  |
+|                   | 2015          | VGG19                    | [Keras](https://keras.io/api/applications)                  |
+|                   | 2015          | WeiNet                   | [Keras](https://keras.io/api/applications)                  |
+|                   | 2014          | SongNet                  | [Keras](https://keras.io/api/applications)                  |
+|                   | 2012          | AlexNet                  | [Keras](https://keras.io/api/applications)                  |
+| Background subtraction | 2020     | U<sup>2</sup>-Net        | [RemBG](https://github.com/danielgatis/rembg)               |
