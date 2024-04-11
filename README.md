@@ -90,32 +90,32 @@ Los resultados del reconocimiento se emiten, también a través de sockets, en:
 
 ## Tareas y modelos disponibles
 
-| Task              | Year          | Method                   | Implementation                                              |
-|-------------------|---------------|--------------------------|-------------------------------------------------------------|
-| Face detection    | 2023          | YOLOv8                   | [Official code](https://github.com/ultralytics/ultralytics) |
-|                   | 2021          | SCRFD                    | [InsightFace](https://github.com/deepinsight/insightface)   |
-|                   | 2016          | MTCNN                    | [TensorFlow](https://github.com/ipazc/mtcnn)                |
-|                   | 2005          | HOG + SVM                | [DLIB](http://dlib.net/python)                              |
-|                   | 2001          | Viola-Jones (face)       | [OpenCV](https://docs.opencv.org/3.4)                       |
-| Face recognition  | 2015          | ResNet50                 | [InsightFace](https://github.com/deepinsight/insightface)   |
-| Person detection  | 2023          | YOLOv8                   | [Official code](https://github.com/ultralytics/ultralytics) |
-| Facial landmarks  | 2022          | SPIGA                    | [Official code](https://github.com/andresprados/SPIGA)      |
-|                   | 2017          | MobileNet                | [InsightFace](https://github.com/deepinsight/insightface)   |
-|                   | 2016          | MTCNN                    | [TensorFlow](https://github.com/ipazc/mtcnn)                |
-|                   | 2014          | Regression Trees         | [DLIB](http://dlib.net/python)                              |
-|                   | 2001          | Viola-Jones (eyes)       | [OpenCV](https://docs.opencv.org/3.4)                       |
-| Age and gender    | 2023          | MiVOLO                   | [Official code](https://github.com/WildChlamydia/MiVOLO)    |
-|                   | 2017          | MobileNet                | [InsightFace](https://github.com/deepinsight/insightface)   |
-| Expression recognition   | 2022   | SilNet                   | [Keras](https://keras.io/api/applications)                  |
-|                   | 2021          | EfficientNetV2           | [Keras](https://keras.io/api/applications)                  |
-|                   | 2019          | MobileNetV3              | [Keras](https://keras.io/api/applications)                  |
-|                   | 2017          | Xception                 | [Keras](https://keras.io/api/applications)                  |
-|                   | 2015          | InceptionV3              | [Keras](https://keras.io/api/applications)                  |
-|                   | 2015          | ResNet50                 | [Keras](https://keras.io/api/applications)                  |
-|                   | 2015          | ResNet101V2              | [Keras](https://keras.io/api/applications)                  |
-|                   | 2015          | VGG16                    | [Keras](https://keras.io/api/applications)                  |
-|                   | 2015          | VGG19                    | [Keras](https://keras.io/api/applications)                  |
-|                   | 2015          | WeiNet                   | [Keras](https://keras.io/api/applications)                  |
-|                   | 2014          | SongNet                  | [Keras](https://keras.io/api/applications)                  |
-|                   | 2012          | AlexNet                  | [Keras](https://keras.io/api/applications)                  |
-| Background subtraction | 2020     | U<sup>2</sup>-Net        | [RemBG](https://github.com/danielgatis/rembg)               |
+| Task                   | Year | Method             | Speed (imgs/s) | Accuracy  | Additional notes                                                                    | Implementation                                              |
+|------------------------|------|--------------------|----------------|-----------|-------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| Face detection         | 2023 | YOLOv8             | 85.51          | Very Good |                                                                                     | [Official code](https://github.com/ultralytics/ultralytics) |
+|                        | 2021 | SCRFD              | 547.38         | Very Good |                                                                                     | [InsightFace](https://github.com/deepinsight/insightface)   |
+|                        | 2016 | MTCNN              | 1.69           | Very Good |                                                                                     | [TensorFlow](https://github.com/ipazc/mtcnn)                |
+|                        | 2005 | HOG + SVM          | 7.97           | Good      |                                                                                     | [DLIB](http://dlib.net/python)                              |
+|                        | 2001 | Viola-Jones (face) | 5.75           | Fair      | Requires good choice of hyperparameters to get good results.                        | [OpenCV](https://docs.opencv.org/3.4)                       |
+| Face recognition       | 2015 | ResNet50           | 15.73          | Very Good |                                                                                     | [InsightFace](https://github.com/deepinsight/insightface)   |
+| Person detection       | 2023 | YOLOv8             | 76.24          | Very Good |                                                                                     | [Official code](https://github.com/ultralytics/ultralytics) |
+| Facial landmarks       | 2022 | SPIGA              | 11.19          | Very Good | **98 landmarks**.                                                                       | [Official code](https://github.com/andresprados/SPIGA)      |
+|                        | 2017 | MobileNet          | 122.87         | Very Good | **106 landmarks**.                                                                      | [InsightFace](https://github.com/deepinsight/insightface)   |
+|                        | 2016 | MTCNN              | 0.82           | Good      | **5 landmarks**: eye_left, eye_right, nose, mouth_left, mouth_right.                    | [TensorFlow](https://github.com/ipazc/mtcnn)                |
+|                        | 2014 | Regression Trees   | 56.88          | Good      | **68 landmarks**.                                                                       | [DLIB](http://dlib.net/python)                              |
+|                        | 2001 | Viola-Jones (eyes) | 10.19          | Fair      | **2 landmarks**: the eyes. Requires good choice of hyperparameters to get good results. | [OpenCV](https://docs.opencv.org/3.4)                       |
+| Age and gender         | 2023 | MiVOLO             | 10.78          | Very Good |                                                                                     | [Official code](https://github.com/WildChlamydia/MiVOLO)    |
+|                        | 2017 | MobileNet          | 91.73          | Good      | Does not work for children.                                                         | [InsightFace](https://github.com/deepinsight/insightface)   |
+| Expression recognition | 2022 | SilNet             | 5.92           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2021 | EfficientNetV2     | 4.99           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2019 | MobileNetV3        | 5.60           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2017 | Xception           | 5.62           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2015 | InceptionV3        | 2.99           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2015 | ResNet50           | 4.51           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2015 | ResNet101V2        | 3.93           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2015 | VGG16              | 4.72           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2015 | VGG19              | 4.39           | Very Good | This is the model we have tested the most.                                          | [Keras](https://keras.io/api/applications)                  |
+|                        | 2015 | WeiNet             | 6.95           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2014 | SongNet            | 6.34           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
+|                        | 2012 | AlexNet            | 6.60           | Very Good | Good choice if the extra speed is required.                                         | [Keras](https://keras.io/api/applications)                  |
+| Background subtraction | 2020 | U2-Net             | 2.53           | Very Good |                                                                                     | [RemBG]                                                     |(https://github.com/danielgatis/rembg)               |
