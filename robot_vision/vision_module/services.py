@@ -23,6 +23,9 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
     recognizer = predefined.predefined_selector(task, method)
 
     while True:
+
+        # Get frame from the input queue. MAY BLOCK UNTIL THERE ARE ELEMENTS
+        img = input_frames.get()
         
         # If we receive new task/method: change recognizer
         if conn.poll():
@@ -34,9 +37,6 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
             
             task = new_task
             method = new_method
-
-        # Get frame from the input queue. MAY BLOCK UNTIL THERE ARE ELEMENTS
-        img = input_frames.get()
             
         print('------- AI THREAD: New computation -------')
 

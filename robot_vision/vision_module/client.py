@@ -1,5 +1,6 @@
 from time import sleep
 import cv2
+import os
 import socketio #python-socketio by @miguelgrinberg
 import services
 import threading
@@ -35,18 +36,46 @@ def ask_recognitions():
     print('Starting AI Recognition module')
 
     while not RecordingInfo.end:
-
+        
+        # Stream mode
         choice = 0
-        while choice not in [1,2,3,4]:
-            print('\nAvailable modes:'+
-                '\n1 - (video stream): Plot recognitions in real time.'+
-                '\n2 - (video stream): Return recognitions as text.'+
-                '\n3 - (screen capture): Plot recognitions in real time.'+
-                '\n4 - (screen capture): Return recognitions as text.')
+        while choice not in [1,2]:
+            print('\nAvailable stream modes:'+
+                '\n1 - (video): video stream'+
+                '\n2 - (image): screen capture')
             choice = int(input('\nChoose mode: '))
+        stream_mode = 'video' if choice == 1 else 'image'
 
-        stream_mode = 'video' if choice in [1,2] else 'image'
-        mode = 'plot' if choice in [1,3] else 'text'
+        # Input mode
+        choice = 0
+        while choice not in [1,2]:
+            print('\nAvailable input modes:'+
+                '\n1 - (camera): record camera'+
+                '\n2 - (file): read video file')
+            choice = int(input('\nChoose mode: '))
+        input_mode = 'camera' if choice == 1 else 'file'
+
+        # Output type
+        choice = 0
+        while choice not in [1,2]:
+            print('\nAvailable output modes:'+
+                '\n1 - (plot): plot recognitions in real time.'+
+                '\n2 - (text): Return recognitions as text.')
+            choice = int(input('\nChoose mode: '))
+        output_type = 'plot' if choice == 1 else 'text'
+
+        # Output mode
+        choice = 0
+        while choice not in [1,2]:
+            print('\nAvailable output modes:'+
+                '\n1 - (show): show recognitions in real time on the screen.'+
+                '\n2 - (save): save recognitions in a file.')
+            choice = int(input('\nChoose mode: '))
+        output_mode = 'show' if choice == 1 else 'save'
+
+        if output_mode == 'save' and input_mode == 'camera':
+            print('Error: "save" output mode and "camera" input mode are not compatible. Please, choose another value for one of them.')
+            continue
 
         print('\nAvailable tasks:')
         print(get_as_options(list(PREDEFINED_RECOGNIZERS.keys())))
@@ -67,7 +96,10 @@ def ask_recognitions():
         if stream_mode == 'image':
             print('Press LEFT MOUSE BUTTON for screen capture.\n')
 
-        record_and_send_webcam(task, method, mode, stream_mode)
+        if output_mode == 'show':
+            record_and_send_webcam(task, method, stream_mode, input_mode, output_type)
+        else:
+            read_and_send_file(task, method, stream_mode, output_type)
 
         continue_recognition = ''
         while continue_recognition not in ['y', 'n', 'yes', 'no']:
@@ -84,16 +116,89 @@ def ask_recognitions():
     return
 
 
+def read_and_send_file(task, method, stream_mode, output_type):
+    
+    # Input file
+    input_file = None
+    while input_file is None:
+        input_file = input('\nEnter %s input path: ' % stream_mode)
+        if not os.path.exists(input_file):
+            print('Error: file does not exist. Enter a new path.')
+            input_file = None
+    input_f = open(input_file)
 
-def record_and_send_webcam(task, method, mode, stream_mode):
+    # Output file
+    output_file = None
+    while output_file is None:
+        output_file = input('\nEnter %s outupt path: ' % stream_mode)
+        try:
+            output_f = open(output_file, 'w')
+        except:
+            print('Error: invalid path. Enter a new one.')
+            output_file = None
+        
+    # Image mode
+    if stream_mode == 'image':
+        img_64_out = services.image_to_base64(cv2.imread(input_f))
+
+        try:
+            response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+output_type, data=img_64_out, headers={'content-type': 'image/jpg'})
+
+            # Check if response errors
+            response.raise_for_status()
+
+            if output_type == 'plot':
+                img_response = services.base64_to_image(response.text)
+                cv2.imwrite(output_f, img_response)
+            elif output_type == 'text':
+                output_f.write(response.text)
+
+        except Exception as error:
+            print('Response error:', error)
+    
+    # Video mode
+    else:
+        print('Functionality not yet implemented!')
+        pass
+        # try:
+        #     response = requests.post(base_url+'/sendVideo?task='+task+'&method='+method+'&mode='+output_type+'&step=1', data=input_f, headers={'content-type': 'video/mp4'})
+
+        #     # Check if response errors
+        #     response.raise_for_status()
+
+        #     if output_type == 'plot':
+        #         img_response = services.base64_to_image(response.text)
+        #         cv2.imwrite(output_f, img_response)
+        #     elif output_type == 'text':
+        #         output_f.write(response.text)
+
+        # except Exception as error:
+        #     print('Response error:', error)
+        
+    input_f.close()
+    output_f.close()
+
+    
+
+def record_and_send_webcam(task, method, stream_mode, input_mode, output_type):
 
     RecordingInfo.stop_video_feed = False
-    cam = cv2.VideoCapture(0)
+
+    if input_mode == 'camera':
+        cam = cv2.VideoCapture(0)
+    else:
+        input_file = input('\nEnter video input path: ')
+        cam = cv2.VideoCapture(input_file)
 
     while (not RecordingInfo.stop_video_feed):
 
         # get frame from webcam
         ret, frame = cam.read()
+    
+        # Finish
+        if not ret:
+            RecordingInfo.stop_video_feed = True
+            break
 
         # Close
         if RecordingInfo.stop_video_feed or(cv2.waitKey(1) & 0xFF == ord('q')):
@@ -110,21 +215,21 @@ def record_and_send_webcam(task, method, mode, stream_mode):
         # send to server
         if stream_mode == 'video':
             img_64_out = services.image_to_base64(frame)
-            sio.emit('sendFrame', (img_64_out, task, method, mode), namespace='/videoStream')
+            sio.emit('sendFrame', (img_64_out, task, method, output_type), namespace='/videoStream')
         elif RecordingInfo.capture:
             RecordingInfo.capture = False
             img_64_out = services.image_to_base64(frame)
 
             try:
-                response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+mode, data=img_64_out, headers={'content-type': 'image/jpg'})
+                response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+output_type, data=img_64_out, headers={'content-type': 'image/jpg'})
 
                 # Check if response errors
                 response.raise_for_status()
 
-                if mode == 'plot':
+                if output_type == 'plot':
                     img_response = services.base64_to_image(response.text)
                     RecordingInfo.processed_frame = img_response
-                elif mode == 'text':
+                elif output_type == 'text':
                     print(response.text)
 
             except Exception as error:

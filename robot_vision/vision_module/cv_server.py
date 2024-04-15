@@ -1,5 +1,7 @@
 from flask import Flask, request, Response
 from gevent.pywsgi import WSGIServer
+import cv2
+import numpy
 
 from flask_socketio import emit, SocketIO
 from threading import Lock
@@ -61,6 +63,71 @@ def sendImage():
         return img_64_out
     elif mode == 'text':
         return str(result)
+
+
+@app.route("/sendVideo", methods=['POST'])
+def sendVideo():
+    
+    print('Video received.')
+
+    new_task = request.args.get('task', type = str)
+    new_method = request.args.get('method', type = str)
+    mode = request.args.get('mode', default='text', type = str)
+    step = request.args.get('step', default=1, type = int)
+
+    if new_task is None or new_method is None:
+        print('No task or method specified!')
+        return 'bad request!', 400
+
+    # Update recognizer
+    update_recognizer(new_task, new_method, mode)
+
+    # Init video reader
+    cap = cv2.VideoCapture(request.data, cv2.CAP_ANY)
+    frame_i = 0
+    results = []
+    step_aux = 0
+
+    # Init output if mode is plot
+    if mode == 'plot':
+        out_video = np.zeros((int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype='uint8')
+
+    # Read input video
+    while cap.isOpened():
+            
+        # Read frame
+        ret, frame = cap.read()
+    
+        # Finish
+        if not ret:
+            break
+        
+        if step_aux == 0:
+            
+            # Put the incoming frame in the queue to be processed
+            put_image_in_queue(frame)
+
+            # Get frame from the background, blocking.
+            result, plot_img = output_results.get()
+        
+        step_aux = (step_aux + 1) % step
+
+        # Save result and plot
+        results.append(result)
+        if mode == 'plot':
+            out_video[frame_i,...] = plot_img
+        
+        frame_i += 1
+    cap.release()
+
+    if result is None:
+        print('Error in recognition!')
+        return 'error in recognition!', 500
+
+    if mode == 'plot':
+        return out_video
+    elif mode == 'text':
+        return str(results)
 
 
 @sio.on("connect")
@@ -139,8 +206,8 @@ if __name__ == "__main__":
     task = None
     method = None
     parent_conn, child_conn = Pipe()
-    input_frames: Queue = Queue(10)
-    output_results: Queue = Queue(10)
+    input_frames: Queue = Queue(1)
+    output_results: Queue = Queue(1)
     b_process = Process(target=services.process_images, args=(child_conn, input_frames, output_results), daemon=True)
     b_process.start()
 
