@@ -22,6 +22,12 @@ class VideoRecognition:
         """Get recognition results as a list.
         """
         return self.results
+    
+    def save_results(self, output_file):
+        with open(output_file, "w") as f:
+            for r in self.results:
+                f.write(str(r)+'\n')
+
 
 class VideoRecognitionPath(VideoRecognition):
     
@@ -37,8 +43,17 @@ class VideoRecognitionPath(VideoRecognition):
         super().__init__(recognizer, step)
         self.video_path = video_path
 
-    def run(self):
+    def run(self, method='decord'):
         """Get list of recognition results of a video, each element corresponding to one frame"""
+
+        if method == 'decord':
+            return self.run_decord()
+        elif method == 'opencv':
+            return self.run_opencv()
+        else:
+            raise KeyError()
+
+    def run_decord(self):
         
         self.results = []
         
@@ -47,11 +62,41 @@ class VideoRecognitionPath(VideoRecognition):
             
             for i in tqdm(range(0, len(vr), self.step)):
                 frame = vr[i].asnumpy()
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
                 result = self.recognizer.get_result(frame)
 
                 # Extend results to skiped frames
                 for _ in range(self.step):
                     self.results.append(result)
+
+    def run_opencv(self):
+
+        self.results = []
+        
+        cap = cv2.VideoCapture(self.video_path, cv2.CAP_ANY)
+        frame_i = 0
+
+        progress = tqdm(total=int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+    
+            # Finish
+            if not ret:
+                break
+            
+            # Compute recognition
+            if frame_i == 0:
+                result = self.recognizer.get_result(frame)
+
+            # Out of if to extend results to skiped frames
+            self.results.append(result)
+
+            frame_i = (frame_i + 1) % self.step
+            progress.update(1)
+
+        cap.release()
 
     def get_results_plot(self, output_path):
         """Get recognition as an output video.
@@ -81,12 +126,13 @@ class VideoRecognitionPath(VideoRecognition):
             result = self.results[frame_i]
 
             # Get plot
-            out_frame = self.recognizer.get_plot_result(frame, result)
+            out_frame = self.recognizer.get_plot_result(frame, result) if result is not None else frame
 
             # Write to output video
             out.write(out_frame)
 
             frame_i += 1
+            
         cap.release()
         out.release()
 
@@ -123,9 +169,6 @@ class VideoRecognitionNumPy(VideoRecognition):
         Returns:
             numpy array: resulting video.
         """
-        
-        # Input video
-        frame_i = 0
 
         # Output video
         out_video = copy.deepcopy(self.video)

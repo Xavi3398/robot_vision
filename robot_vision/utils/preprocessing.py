@@ -21,6 +21,10 @@ class Preprocessing:
 
         keypoints = self.keypoints_detector.get_keypoints(img)
 
+        # Case where no face found
+        if keypoints is None:
+            return None
+
         # Too many keypoints. We do not know which ones are from the eyes, nose and mouth
         if len(keypoints) > 5:
             raise Exception('Keypoints detector must return either the eye landmarks (mode "eyes") or the landmarks of the eyes, mouth corners and nose (mode "5").')

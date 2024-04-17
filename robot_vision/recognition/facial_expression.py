@@ -64,6 +64,10 @@ class KerasFacialExpressionRecognizer(FacialExpressionRecognizer):
         
         if self.preprocessor is not None:
             img = self.preprocessor.preprocess(img)
+        
+        # Case where no face found
+        if img is None:
+            return None
 
         if len(img.shape) < 3 or img.shape[2] < 3:
             img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)

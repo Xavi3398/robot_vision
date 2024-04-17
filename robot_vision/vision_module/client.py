@@ -7,6 +7,7 @@ import threading
 import requests
 
 from robot_vision.recognition.predefined import PREDEFINED_RECOGNIZERS
+from robot_vision.utils.video import VideoRecognitionPath
 
 base_url = 'http://127.0.0.1:8080'
 
@@ -41,8 +42,8 @@ def ask_recognitions():
         choice = 0
         while choice not in [1,2]:
             print('\nAvailable stream modes:'+
-                '\n1 - (video): video stream'+
-                '\n2 - (image): screen capture')
+                '\n1 - (video)'+
+                '\n2 - (image)')
             choice = int(input('\nChoose mode: '))
         stream_mode = 'video' if choice == 1 else 'image'
 
@@ -59,7 +60,7 @@ def ask_recognitions():
         choice = 0
         while choice not in [1,2]:
             print('\nAvailable output modes:'+
-                '\n1 - (plot): plot recognitions in real time.'+
+                '\n1 - (plot): plot recognitions as images.'+
                 '\n2 - (text): Return recognitions as text.')
             choice = int(input('\nChoose mode: '))
         output_type = 'plot' if choice == 1 else 'text'
@@ -125,7 +126,6 @@ def read_and_send_file(task, method, stream_mode, output_type):
         if not os.path.exists(input_file):
             print('Error: file does not exist. Enter a new path.')
             input_file = None
-    input_f = open(input_file)
 
     # Output file
     output_file = None
@@ -133,33 +133,46 @@ def read_and_send_file(task, method, stream_mode, output_type):
         output_file = input('\nEnter %s outupt path: ' % stream_mode)
         try:
             output_f = open(output_file, 'w')
+            output_f.close()
         except:
             print('Error: invalid path. Enter a new one.')
             output_file = None
         
     # Image mode
     if stream_mode == 'image':
-        img_64_out = services.image_to_base64(cv2.imread(input_f))
+        
+            img_64_out = services.image_to_base64(cv2.imread(input_file))
 
-        try:
-            response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+output_type, data=img_64_out, headers={'content-type': 'image/jpg'})
+            try:
+                response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+output_type, data=img_64_out, headers={'content-type': 'image/jpg'})
 
-            # Check if response errors
-            response.raise_for_status()
+                # Check if response errors
+                response.raise_for_status()
 
-            if output_type == 'plot':
-                img_response = services.base64_to_image(response.text)
-                cv2.imwrite(output_f, img_response)
-            elif output_type == 'text':
-                output_f.write(response.text)
+                if output_type == 'plot':
+                    img_response = services.base64_to_image(response.text)
+                    cv2.imwrite(output_file, img_response)
+                elif output_type == 'text':
+                    with open(output_file, 'w') as output_f:
+                        output_f.write(response.text)
 
-        except Exception as error:
-            print('Response error:', error)
+            except Exception as error:
+                print('Response error:', error)
     
     # Video mode
     else:
-        print('Functionality not yet implemented!')
-        pass
+        print('ERROR: Functionality not yet implemented. Computation done locally (not using server).')
+
+        recognizer = PREDEFINED_RECOGNIZERS['face_detection']['YOLOv8']()
+        vr = VideoRecognitionPath(input_file, recognizer, step=1)
+        vr.run()
+
+        if output_type == 'text':
+            print(vr.save_results(output_file))
+            print("Output results saved at: '%s'" % output_file)
+        else:
+            vr.get_results_plot(output_file)
+            print("Output video saved at: '%s'" % output_file)
         # try:
         #     response = requests.post(base_url+'/sendVideo?task='+task+'&method='+method+'&mode='+output_type+'&step=1', data=input_f, headers={'content-type': 'video/mp4'})
 
@@ -174,9 +187,6 @@ def read_and_send_file(task, method, stream_mode, output_type):
 
         # except Exception as error:
         #     print('Response error:', error)
-        
-    input_f.close()
-    output_f.close()
 
     
 

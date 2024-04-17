@@ -25,6 +25,11 @@ class FacialRecognition(Recognizer):
         for img_path in img_paths:
             img = cv2.imread(img_path)
             features = self.get_features(img)
+
+            if features is None:
+                print('Error initializing faces.')
+                raise Exception()
+
             self.rec_ids.append({'img_path': img_path, 'features': features})
         
         print(str(len(self.rec_ids)) + ' identities initialized.')
@@ -39,6 +44,11 @@ class FacialRecognition(Recognizer):
             id (int): index of the recocognized identity.
         """
         features = self.get_features(img)
+
+        # Case where no face found
+        if features is None:
+            return None
+
         distances = [self.distance_fn(features, id['features']) for id in self.rec_ids]
         return self.rec_ids[np.argmin(distances)]['img_path']
 

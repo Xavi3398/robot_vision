@@ -77,6 +77,11 @@ class SPIGAKeypoints(Keypoints):
 
         # Face bbox needed
         face_bbox = self.face_detector.get_bbox(img)
+
+        # Case where no face found
+        if face_bbox is None:
+            return None
+        
         face_bbox = bbox_xy2wh(face_bbox)
 
         features = self.processor.inference(img, [face_bbox])
@@ -244,6 +249,10 @@ class DLIBKeypoints(Keypoints):
     def get_keypoints(self, img: np.ndarray) -> np.ndarray:
 
         bbox = self.face_detector.get_bbox(img)
+
+        # Case where no face found
+        if bbox is None:
+            return None
 
         # Detecta los landmarks de la imagen
         dlib_rect = dlib.rectangle(bbox[0], bbox[1], bbox[2], bbox[3])
