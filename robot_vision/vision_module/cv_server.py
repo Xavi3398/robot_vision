@@ -1,7 +1,9 @@
+import os
 from flask import Flask, request, Response
 from gevent.pywsgi import WSGIServer
 import cv2
-import numpy
+import numpy as np
+import tempfile
 
 from flask_socketio import emit, SocketIO
 from threading import Lock
@@ -64,7 +66,7 @@ def sendImage():
     elif mode == 'text':
         return str(result)
 
-
+# Receive video and return processed video
 @app.route("/sendVideo", methods=['POST'])
 def sendVideo():
     
@@ -82,15 +84,20 @@ def sendVideo():
     # Update recognizer
     update_recognizer(new_task, new_method, mode)
 
-    # Init video reader
-    cap = cv2.VideoCapture(request.data, cv2.CAP_ANY)
+    # Save video to a temporary file
+    file = request.files['file']
+    tmpf_in = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+    file.save(tmpf_in.name)
+
+    # Read video
+    cap = cv2.VideoCapture(tmpf_in.name, cv2.CAP_ANY)
     frame_i = 0
     results = []
     step_aux = 0
 
     # Init output if mode is plot
     if mode == 'plot':
-        out_video = np.zeros((int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype='uint8')
+        out_video = cv2.VideoWriter('tmp/temp_video.mp4', int(cap.get(cv2.CAP_PROP_FOURCC)), cap.get(cv2.CAP_PROP_FPS), (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
     # Read input video
     while cap.isOpened():
@@ -115,18 +122,26 @@ def sendVideo():
         # Save result and plot
         results.append(result)
         if mode == 'plot':
-            out_video[frame_i,...] = plot_img
+            out_video.write(plot_img)
         
         frame_i += 1
+
     cap.release()
+    tmpf_in.close()
+    os.unlink(tmpf_in.name)
+
+    if mode == 'plot':
+        out_video.release()
 
     if result is None:
         print('Error in recognition!')
         return 'error in recognition!', 500
 
     if mode == 'plot':
-        return out_video
+        print('Returning video.')
+        return Response(open('tmp/temp_video.mp4', 'rb'), mimetype='video/mp4')
     elif mode == 'text':
+        print('Returning text.')
         return str(results)
 
 

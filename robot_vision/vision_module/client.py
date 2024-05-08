@@ -144,7 +144,7 @@ def read_and_send_file(task, method, stream_mode, output_type):
             img_64_out = services.image_to_base64(cv2.imread(input_file))
 
             try:
-                response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+output_type, data=img_64_out, headers={'content-type': 'image/jpg'})
+                response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+output_type, data=img_64_out, headers={'content-type': 'image/jpg'}, timeout=None)
 
                 # Check if response errors
                 response.raise_for_status()
@@ -161,32 +161,25 @@ def read_and_send_file(task, method, stream_mode, output_type):
     
     # Video mode
     else:
-        print('ERROR: Functionality not yet implemented. Computation done locally (not using server).')
 
-        recognizer = PREDEFINED_RECOGNIZERS['face_detection']['YOLOv8']()
-        vr = VideoRecognitionPath(input_file, recognizer, step=1)
-        vr.run()
+        # Open input file
+        input_f = {'file': open(input_file, 'rb')}
 
-        if output_type == 'text':
-            print(vr.save_results(output_file))
-            print("Output results saved at: '%s'" % output_file)
-        else:
-            vr.get_results_plot(output_file)
-            print("Output video saved at: '%s'" % output_file)
-        # try:
-        #     response = requests.post(base_url+'/sendVideo?task='+task+'&method='+method+'&mode='+output_type+'&step=1', data=input_f, headers={'content-type': 'video/mp4'})
+        try:
+            response = requests.post(base_url+'/sendVideo?task='+task+'&method='+method+'&mode='+output_type+'&step=1', files=input_f, timeout=None)
 
-        #     # Check if response errors
-        #     response.raise_for_status()
+            # Check if response errors
+            response.raise_for_status()
 
-        #     if output_type == 'plot':
-        #         img_response = services.base64_to_image(response.text)
-        #         cv2.imwrite(output_f, img_response)
-        #     elif output_type == 'text':
-        #         output_f.write(response.text)
+            if output_type == 'plot':
+                with open(output_file, 'wb') as output_f:
+                    output_f.write(response.content)
+            elif output_type == 'text':
+                with open(output_file, 'w') as output_f:
+                    output_f.write(response.text)
 
-        # except Exception as error:
-        #     print('Response error:', error)
+        except Exception as error:
+            print('Response error:', error)
 
     
 
@@ -231,7 +224,7 @@ def record_and_send_webcam(task, method, stream_mode, input_mode, output_type):
             img_64_out = services.image_to_base64(frame)
 
             try:
-                response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+output_type, data=img_64_out, headers={'content-type': 'image/jpg'})
+                response = requests.post(base_url+'/sendImage?task='+task+'&method='+method+'&mode='+output_type, data=img_64_out, headers={'content-type': 'image/jpg'}, timeout=None)
 
                 # Check if response errors
                 response.raise_for_status()
