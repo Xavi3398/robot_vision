@@ -7,11 +7,12 @@ import traceback
 from multiprocessing import Process, Pipe, Queue, Lock
 from multiprocessing.connection import Connection
 
-from robot_vision.recognition.recognizer import Recognizer
-from robot_vision.recognition import predefined
+from robot_vision.recognition import predefined as predefined_recognition
+from robot_vision.explanation import predefined as predefined_explanation
+from robot_vision import explanation
 
-predefined.MODELS_FOLDER = '../models'
-predefined.USER_FACES_FOLDER = '../user_faces'
+predefined_recognition.MODELS_FOLDER = '../models'
+predefined_recognition.USER_FACES_FOLDER = '../user_faces'
 
 
 def process_images(conn: Connection, input_frames: Queue, output_results: Queue):
@@ -19,8 +20,10 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
     print('------- AI THREAD: Start -------')
 
     # To start, wait until we receive a task and method. MAY BLOCK UNTIL WE RECEIVE ELEMENTS
-    task, method, plot = conn.recv()
-    recognizer = predefined.predefined_selector(task, method)
+    task, method, mode, expl_method = conn.recv()
+    recognizer = predefined_recognition.predefined_selector(task, method)
+    if mode == 'explanation':
+        explainer = predefined_explanation.predefined_selector(expl_method)
 
     while True:
 
@@ -29,29 +32,49 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
         
         # If we receive new task/method: change recognizer
         if conn.poll():
-            new_task, new_method, plot = conn.recv()
+            new_task, new_method, new_mode, new_expl_method = conn.recv()
 
             if new_task != task or new_method != method:
                 print('------- AI THREAD: Changing recognizer -------')
-                recognizer = predefined.predefined_selector(new_task, new_method)
+                recognizer = predefined_recognition.predefined_selector(new_task, new_method)
+            
+            if mode == 'explanation' and new_expl_method != expl_method:
+                explainer = predefined_explanation.predefined_selector(new_expl_method)
             
             task = new_task
             method = new_method
+            mode = new_mode
+            expl_method = new_expl_method
             
         print('------- AI THREAD: New computation -------')
 
-        try:
-            result = recognizer.get_result(img)
-        except Exception as error:
-            print('------- AI THREAD: Error in recognition: -------')
-            print(error)
-            print(traceback.print_exc() )
-            print('------- AI THREAD: End of error -------')
+        if mode == 'explanation':
+            try:
+                result = recognizer.get_result(img)
+                expl_img = recognizer.get_explanation(img, explainer)
+            except Exception as error:
+                print('------- AI THREAD: Error in explanation: -------')
+                print(error)
+                print(traceback.print_exc() )
+                print('------- AI THREAD: End of error -------')
 
-            result = None
+                result = None
+                plot_img = None
+        else:
+            try:
+                result = recognizer.get_result(img)
+            except Exception as error:
+                print('------- AI THREAD: Error in recognition: -------')
+                print(error)
+                print(traceback.print_exc() )
+                print('------- AI THREAD: End of error -------')
+
+                result = None
 
         # Return also plot or not
-        if result is not None and plot:
+        if mode == 'explanation' and result is not None and expl_img is not None:
+            plot_img = recognizer.get_plot_result(expl_img, result)
+        elif mode == 'plot' and result is not None:
             plot_img = recognizer.get_plot_result(img, result)
         else:
             plot_img = None
@@ -64,7 +87,7 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
                 pass
         
         # Put the result in the output queue
-        output_results.put((result, plot_img))
+        output_results.put((None, plot_img))
 
 
 def image_to_base64(img):

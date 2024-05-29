@@ -16,7 +16,7 @@ class FacialExpressionRecognizer(Recognizer):
     def __init__(self) -> None:
         pass
 
-    def get_facial_expression(self, img) -> np.ndarray:
+    def get_facial_expression(self, img) -> str:
         """Find bounding box of target class in image.
 
         Args:
@@ -60,8 +60,9 @@ class KerasFacialExpressionRecognizer(FacialExpressionRecognizer):
         else:
             self.preprocessor = None
 
-    def get_facial_expression(self, img) -> np.ndarray:
+    def get_facial_expression(self, img) -> str:
         
+        # Preprocess image
         if self.preprocessor is not None:
             img = self.preprocessor.preprocess(img)
         
@@ -69,9 +70,29 @@ class KerasFacialExpressionRecognizer(FacialExpressionRecognizer):
         if img is None:
             return None
 
+        # Convert to RGB if necessary
         if len(img.shape) < 3 or img.shape[2] < 3:
             img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
 
+        # Get prediction
         predictions = self.model.predict(np.array([img]))[0]
 
+        # Get expression
         return FacialExpressionRecognizer.FACIAL_EXPRESSIONS[np.argmax(predictions)]
+    
+    def get_explanation(self, img, explainer_fn, label=None):
+        
+        # Preprocess image
+        if self.preprocessor is not None:
+            img = self.preprocessor.preprocess(img)
+        
+        # Case where no face found
+        if img is None:
+            return None
+
+        # Convert to RGB if necessary
+        if len(img.shape) < 3 or img.shape[2] < 3:
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        
+        # Get explanation
+        return explainer_fn(img, self.model, label)

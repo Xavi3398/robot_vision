@@ -151,3 +151,4 @@ yt-dlp==2023.12.30
 zipp==3.17.0
 zope.event==5.0
 zope.interface==6.1
+shap==0.44.1

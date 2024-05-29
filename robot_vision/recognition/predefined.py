@@ -11,19 +11,19 @@ MODELS_FOLDER = 'robot_vision/models'
 USER_FACES_FOLDER = 'robot_vision/user_faces'
 
 
-def predefined_selector(task, method=None):
+def predefined_selector(task, method):
     
     # Inexistent task
     if task not in PREDEFINED_RECOGNIZERS.keys():
         raise Exception('Invalid task ('+task+'). Must be one of:'+str(PREDEFINED_RECOGNIZERS.keys()))
-    
-    # Default method
-    if method is None:
-        return PREDEFINED_RECOGNIZERS[task][0]
 
     # Inexistent method
     if method not in PREDEFINED_RECOGNIZERS[task].keys():
         raise Exception('Invalid method ('+method+') for task: ('+task+'). Must be one of:'+str(PREDEFINED_RECOGNIZERS[task].keys()))
+    
+    # Inexistent task
+    if task not in PREDEFINED_RECOGNIZERS.keys():
+        raise Exception('Invalid task ('+task+'). Must be one of:'+str(PREDEFINED_RECOGNIZERS.keys()))
     
     return PREDEFINED_RECOGNIZERS[task][method]()
 

@@ -13,7 +13,7 @@ from multiprocessing.connection import Connection
 from robot_vision.vision_module import services
 
 app = Flask(__name__)
-sio = SocketIO(app, namespaces='/videoStream')
+sio = SocketIO(app, namespaces='/videoStream', ping_timeout=600, ping_interval=30)
 ip = '127.0.0.1'
 port = 8080
 
@@ -21,6 +21,7 @@ MODES = ['plot', 'text']
 
 task: str
 method: str
+expl_method: str
 input_frames: Queue
 output_results: Queue
 parent_conn: Connection
@@ -29,6 +30,39 @@ lock: Lock = Lock()
 @app.route("/")
 def home():
     return "Hello, this is Robot Vision, a Python microservice offering computer vision functionalities."
+
+
+@app.route("/explainImage", methods=['POST'])
+def explainImage():
+    
+    print('Image received for explanation.')
+
+    new_task = request.args.get('task', type = str)
+    new_method = request.args.get('method', type = str)
+    new_expl_method = request.args.get('expl_method', default='lime', type = str)
+
+    if new_task is None or new_method is None or new_expl_method is None:
+        print('No task, method or expl_method specified!')
+        return 'bad request!', 400
+
+    img_64_in = request.data
+    img = services.base64_to_image(img_64_in)
+
+    # Update recognizer
+    update_recognizer(new_task, new_method, 'explanation', new_expl_method)
+
+    # Put the incoming frame in the queue to be processed
+    put_image_in_queue(img)
+
+    # Get frame from the background, blocking.
+    _, plot_img = output_results.get()
+
+    if plot_img is None:
+        print('Error in explanation!')
+        return 'error in explanation!', 500
+
+    img_64_out = services.image_to_base64(plot_img)
+    return img_64_out
 
 
 @app.route("/sendImage", methods=['POST'])
@@ -48,7 +82,7 @@ def sendImage():
     img = services.base64_to_image(img_64_in)
 
     # Update recognizer
-    update_recognizer(new_task, new_method, mode)
+    update_recognizer(new_task, new_method, mode, None)
 
     # Put the incoming frame in the queue to be processed
     put_image_in_queue(img)
@@ -82,7 +116,7 @@ def sendVideo():
         return 'bad request!', 400
 
     # Update recognizer
-    update_recognizer(new_task, new_method, mode)
+    update_recognizer(new_task, new_method, mode, None)
 
     # Save video to a temporary file
     file = request.files['file']
@@ -159,7 +193,7 @@ def receive_frame(img_64_in, new_task, new_method, mode='plot'):
     img = services.base64_to_image(img_64_in)
 
     # Update recognizer
-    update_recognizer(new_task, new_method, mode)
+    update_recognizer(new_task, new_method, mode, None)
 
     # Put the incoming frame in the queue to be processed
     put_image_in_queue(img)
@@ -183,18 +217,20 @@ def receive_frame(img_64_in, new_task, new_method, mode='plot'):
             emit('sendText', (str(result)))
 
 
-def update_recognizer(new_task, new_method, mode):
+def update_recognizer(new_task, new_method, mode, new_expl_method):
 
     # Update recognizer. We use a lock because receive_frame may be executed by different threads simultaneously
     # and we only want one thread in here
     lock.acquire()
     global task
     global method
-    if task != new_task or method != new_method:
+    global expl_method
+    if task != new_task or method != new_method or expl_method != new_expl_method:
         print('New task: '+new_task+'. New method:'+new_method)
         task = new_task
         method = new_method
-        parent_conn.send([task, method, mode=='plot'])
+        expl_method = new_expl_method
+        parent_conn.send([task, method, mode, expl_method])
     lock.release()
 
 

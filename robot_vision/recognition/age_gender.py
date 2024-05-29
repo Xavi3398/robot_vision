@@ -8,6 +8,8 @@ from robot_vision.recognition.recognizer import Recognizer
 from robot_vision.utils.plotting import draw_detections
 
 import numpy as np
+import copy
+import random
 
 class AgeGender(Recognizer):
 
@@ -58,6 +60,64 @@ class InsightFaceAgeGender(AgeGender):
             return None
 
         return round(faces[0]['age']), AgeGender.GENDERS[faces[0]['gender']]
+    
+    def get_explanation(self, img, explainer_fn, label=None, mode='gender', face_bbox=None, num_samples=1000):
+        """Get explanation for the prediction.
+
+        Args:
+            img (3d numpy array): image to explain.
+            explainer_fn (function): explainer function to call, receiving the image, the prediction function, the label and the number of samples.
+            label (int, optional): class to explain. If None, class with highest prediction confidence explained. Defaults to None.
+            mode (str, optional): Whether to explain age or gender. Currently, only 'gender' supported. Defaults to 'gender'.
+            face_bbox (1d numpy array, optional): If provided, perturbations only made in the delimited region. Defaults to None.
+            num_samples (int, optional): Number of perturbed samples to use for explanation. Defaults to 1000.
+
+        Raises:
+            ValueError: If mode != 'gender'.
+
+        Returns:
+            3d numpy array: RGB explanation image
+        """
+
+        if face_bbox is None:
+            face_img = img
+        else:
+            face_img = img[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
+        
+        # Get explanation
+        if mode == 'gender':
+            self.bbox = face_bbox
+            self.img = img
+            return explainer_fn(face_img, self.pred_fn, label, num_samples=num_samples)
+        else:
+            raise ValueError('Mode not supported.')
+        
+    def pred_fn(self, imgs):
+        
+        res = []
+        for i in range(imgs.shape[0]):
+
+            if self.bbox is None:
+                img = imgs[i,...]
+            else:
+                img = copy.deepcopy(self.img)
+                img[self.bbox[1]:self.bbox[3], self.bbox[0]:self.bbox[2]] = imgs[i,...]
+
+            faces = self.app.get(img)
+
+            if len(faces) < 1:
+                pred = random.randint(0, len(AgeGender.GENDERS) - 1)
+                # print('No face found, replaced with random prediction.')
+            else:
+                pred = faces[0]['gender']
+            
+            # Find index of element in list
+            aux = [0, 0]
+            aux[pred] = 1
+            res.append(aux)
+            
+        return np.array(res)
+
 
 
 class MiVOLOAgeGender(AgeGender):
@@ -89,6 +149,58 @@ class MiVOLOAgeGender(AgeGender):
             return None
 
         return round(detected_objects.ages[0]), detected_objects.genders[0]
+    
+    def get_explanation(self, img, explainer_fn, label=None, mode='gender', face_bbox=None):
+        """Get explanation for the prediction.
+
+        Args:
+            img (3d numpy array): image to explain.
+            explainer_fn (function): explainer function to call, receiving the image, the prediction function, the label and the number of samples.
+            label (int, optional): class to explain. If None, class with highest prediction confidence explained. Defaults to None.
+            mode (str, optional): Whether to explain age or gender. Currently, only 'gender' supported. Defaults to 'gender'.
+            face_bbox (1d numpy array, optional): If provided, perturbations only made in the delimited region. Defaults to None.
+            num_samples (int, optional): Number of perturbed samples to use for explanation. Defaults to 1000.
+
+        Raises:
+            ValueError: If mode != 'gender'.
+
+        Returns:
+            3d numpy array: RGB explanation image
+        """
+
+        if face_bbox is None:
+            face_img = img
+        else:
+            face_img = img[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
+        
+        # Get explanation
+        if mode == 'gender':
+            self.bbox = face_bbox
+            self.img = img
+            self.predictions = self.predictor.detector.predict(img)
+            return explainer_fn(face_img, self.pred_fn, label)
+        else:
+            raise ValueError('Mode not supported.')
+        
+    def pred_fn(self, imgs):
+        
+        res = []
+        for i in range(imgs.shape[0]):
+
+            if self.bbox is None:
+                img = imgs[i,...]
+            else:
+                img = copy.deepcopy(self.img)
+                img[self.bbox[1]:self.bbox[3], self.bbox[0]:self.bbox[2]] = imgs[i,...]
+
+            self.predictor.age_gender_model.predict(img, self.predictions)
+            
+            # Find index of element in list
+            aux = [0, 0]
+            aux[AgeGender.GENDERS.index(self.predictions.genders[0])] = 1
+            res.append(aux)
+            
+        return np.array(res)
 
     class Config():
         def __init__(self, detector_weights, checkpoint, device, with_persons, disable_faces, draw):
