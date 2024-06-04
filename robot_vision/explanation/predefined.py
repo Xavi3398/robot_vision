@@ -13,7 +13,7 @@ def predefined_selector(expl_method):
     return PREDEFINED_EXPLAINERS[expl_method]
 
 
-def predefined_lime(img, classifier_fn, label_to_explain=None, num_samples=1000):
+def predefined_lime(img, classifier_fn, label_to_explain=None, num_samples=2000):
 
     # Segment image
     segmenter = segmenters.SlicSegmenter(img)
@@ -36,7 +36,7 @@ def predefined_lime(img, classifier_fn, label_to_explain=None, num_samples=1000)
     return exp_img
 
 
-def predefined_rise(img, classifier_fn, label_to_explain=None, num_samples=1000):
+def predefined_rise(img, classifier_fn, label_to_explain=None, num_samples=2000):
 
     # Segment image
     segmenter = segmenters.RiseSegmenter(img)
@@ -59,7 +59,7 @@ def predefined_rise(img, classifier_fn, label_to_explain=None, num_samples=1000)
     return exp_img
 
 
-def predefined_kernel_shap(img, classifier_fn, label_to_explain=None, num_samples=1000):
+def predefined_kernel_shap(img, classifier_fn, label_to_explain=None, num_samples=2000):
 
     # Segment image
     segmenter = segmenters.SlicSegmenter(img)
@@ -105,7 +105,7 @@ def predefined_shap(img, classifier_fn, label_to_explain=None, num_samples=50):
     return exp_img
 
 
-def predefined_occlusion(img, classifier_fn, label_to_explain=None, kernel_size=[5, 5], stride=[1,1]):
+def predefined_occlusion(img, classifier_fn, label_to_explain=None, kernel_size=[5, 5], stride=[10, 10]):
 
     # Perturb image
     perturber = perturbers.ConvolutionalPerturber(img, classifier_fn=classifier_fn, hide_color=0, kernel_size=kernel_size, stride=stride)

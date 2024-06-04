@@ -874,7 +874,7 @@ class ConvolutionalPerturber(Perturber):
 
             # Update progress
             progress.update(len(imgs))
-        print(labels)
+            
         return np.array(labels)
 
     def get_data(self):
