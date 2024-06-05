@@ -87,7 +87,7 @@ def process_images(conn: Connection, input_frames: Queue, output_results: Queue)
                 pass
         
         # Put the result in the output queue
-        output_results.put((None, plot_img))
+        output_results.put((result, plot_img))
 
 
 def image_to_base64(img):
