@@ -1,7 +1,7 @@
 
 # Robot Vision
 
-Módulo de visión para cualquier robot.
+Módulo de visión para cualquier robot, presentado en el congreso INTERACCION'24 (ver [publicación](https://doi.org/10.1145/3657242.3658601)).
 
 Ver robot_vision/notebooks/Module Testing.ipynb para ver ejemplos de cómo usar las herramientas de visión.
 
@@ -90,7 +90,7 @@ Los resultados del reconocimiento se emiten, también a través de sockets, en:
 
 ## Tareas y modelos disponibles
 
-| Task                   | Year | Method             | Speed (imgs/s) | Accuracy  | Additional notes                                                                    | Implementation                                              |
+| **Task**                   | **Year** | **Method**             | **Speed (imgs/s)** | **Accuracy**  | **Additional notes**                                                                    | **Implementation**                                              |
 |------------------------|------|--------------------|----------------|-----------|-------------------------------------------------------------------------------------|-------------------------------------------------------------|
 | Face detection         | 2023 | YOLOv8             | 85.51          | Very Good |                                                                                     | [Official code](https://github.com/ultralytics/ultralytics) |
 |                        | 2021 | SCRFD              | 547.38         | Very Good |                                                                                     | [InsightFace](https://github.com/deepinsight/insightface)   |
@@ -119,3 +119,24 @@ Los resultados del reconocimiento se emiten, también a través de sockets, en:
 |                        | 2014 | SongNet            | 6.34           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
 |                        | 2012 | AlexNet            | 6.60           | Very Good | Good choice if the extra speed is required.                                         | [Keras](https://keras.io/api/applications)                  |
 | Background subtraction | 2020 | U2-Net             | 2.53           | Very Good |                                                                                     | [RemBG](https://github.com/danielgatis/rembg)               |
+
+Ejemplos:
+
+![Tareas](./notebooks/resources/tasks.png)
+
+## Explicabilidad
+
+| **Method**            | **Speed** | **_'Quality'_** | **Segmentation** | **Relevance**         |
+|-----------------------|-----------|---------------|------------------|-----------------------|
+| LIME                  | Medium    | Good          | SLIC superpixels | Positive and Negative |
+| SHAP                  | Slow      | Good          | SLIC superpixels | Positive and Negative |
+| Kernel SHAP           | Medium    | Good          | SLIC superpixels | Positive and Negative |
+| RISE                  | Medium    | Good          | Grid             | Heatmap               |
+| Occlusion Sensitivity | Medium    | Medium        | Grid             | Heatmap               |
+| LOCO                  | Fast      | Bad           | SLIC superpixels | Positive and Negative |
+| Univariate Predictors | Fast      | Very bad      | SLIC superpixels | Positive and Negative |
+
+***Nota***:  *Para los métodos que ofrecen relevancia positiva y negativa, se puestra en verde la positiva y en rojo la negativa. La relevancia positiva indica aquellas regiones que, al ser eliminadas, impiden al modelo reconocer la clase. La importancia negativa indica aquellas regiones que al ser eliminadas, ayudan al modelo a reconocer la clase.*
+
+Ejemplos:
+![Métodos de explicabilidad](./notebooks/resources/explanations.png)
