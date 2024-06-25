@@ -225,7 +225,14 @@ def record_and_send_webcam(task, method, stream_mode, input_mode, output_type, e
     if input_mode == 'camera':
         cam = cv2.VideoCapture(0)
     else:
-        input_file = input('\nEnter video input path: ')
+        # Output file
+        input_file = None
+        while input_file is None:
+            input_file = input('\nEnter %s input path: ' % stream_mode)
+            if not os.path.exists(input_file):
+                print('Error: file does not exist. Enter a new path.')
+                input_file = None
+                
         cam = cv2.VideoCapture(input_file)
 
     while (not RecordingInfo.stop_video_feed):

@@ -156,7 +156,10 @@ def sendVideo():
         # Save result and plot
         results.append(result)
         if mode == 'plot':
-            out_video.write(plot_img)
+            if result is not None:
+                out_video.write(plot_img)
+            else:
+                out_video.write(frame)
         
         frame_i += 1
 
