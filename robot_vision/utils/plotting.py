@@ -21,9 +21,12 @@ def draw_bbox(img: np.ndarray, bbox, color=[255,0,0], thickness=2):
     img = cv2.line(img, [bbox[2], bbox[3]], [bbox[0], bbox[3]], color, thickness)
     return img
 
-def draw_keypoints(img: np.ndarray, keypoints, color=[255,0,0], radius=3, thickness=-1):
-    for kp in keypoints:
-        img = cv2.circle(img, (int(kp[0]), int(kp[1])), radius=radius, color=color, thickness=thickness)
+def draw_keypoints(img: np.ndarray, keypoints, color=[255,0,0], radius=3, thickness=-1, numbers=False):
+    for i, kp in enumerate(keypoints):
+        if numbers:
+            img = cv2.putText(img, str(i), (int(kp[0]), int(kp[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color=color, thickness=1)
+        else:
+            img = cv2.circle(img, (int(kp[0]), int(kp[1])), radius=radius, color=color, thickness=thickness)
     return img
 
 def draw_text(img: np.ndarray, point, text, color=(255, 0, 0), color_bg=(255, 255, 255), thickness=2, font=cv2.FONT_HERSHEY_PLAIN, fontScale=2):
@@ -38,7 +41,10 @@ def draw_text(img: np.ndarray, point, text, color=(255, 0, 0), color_bg=(255, 25
 
     return img
 
-def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None, expression=None, user_face=None):
+def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None, expression=None, user_face=None, mouth_open=None):
+
+    font_factor = img.shape[1]/300
+    point_factor = img.shape[1]//300
 
     # Recognition
     if user_face is not None:
@@ -79,9 +85,6 @@ def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None,
     
     # Age & Gender
     if age is not None or gender is not None or expression is not None:
-        
-        font_factor = img.shape[1]/300
-        point_factor = img.shape[1]//300
 
         elements = []
         for element in [age, gender, expression]:
@@ -98,6 +101,20 @@ def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None,
             point = bbox[:2].astype('int')
         img = draw_text(img, [point[0]+5*point_factor, point[1]+15*point_factor], text, fontScale=font_factor)
     
+    # Mouth open
+    if mouth_open is not None:
+
+        # Draw mouth points
+        img = draw_keypoints(img, [mouth_open[1], mouth_open[2]])
+
+        # Draw line between mouth points
+        img = cv2.line(img, (int(mouth_open[1][0]), int(mouth_open[1][1])), (int(mouth_open[2][0]), int(mouth_open[2][1])), (255, 0, 0), 2)
+
+        # Draw text
+        point = mouth_open[2].astype(int)
+        point[0] += 10
+        img = draw_text(img, point, str(round(mouth_open[0], 2)), fontScale=font_factor)
+
     # RGB to BGR
     img = img[:,:,::-1]
 

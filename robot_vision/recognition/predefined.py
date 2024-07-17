@@ -4,6 +4,7 @@ from robot_vision.recognition import background_subtraction
 from robot_vision.recognition import age_gender
 from robot_vision.recognition import keypoints
 from robot_vision.recognition import facial_expression
+from robot_vision.recognition import mouth_open
 
 import os
 
@@ -137,6 +138,14 @@ def predefined_face_recognition_InsightFace():
 # BACKGROUND SUBTRACTION
 def predefined_background_subtraction_RemBG():
     return background_subtraction.RemBGBackgroundSubtractor()
+    
+# MOUTH OPEN
+def predefined_mouth_open_InsightFace(**args):
+    return mouth_open.InsightFaceMouthOpen(**args)
+
+def predefined_mouth_open_SPIGA():
+    return mouth_open.SPIGAMouthOpen(
+            face_detector=PREDEFINED_RECOGNIZERS['face_detection'][list(PREDEFINED_RECOGNIZERS['face_detection'].keys())[0]]())
 
 
 PREDEFINED_RECOGNIZERS = {
@@ -173,5 +182,8 @@ PREDEFINED_RECOGNIZERS = {
     'face_recognition': {
         'InsightFace': predefined_face_recognition_InsightFace},
     'background_subtraction': {
-        'RemBG': predefined_background_subtraction_RemBG}
+        'RemBG': predefined_background_subtraction_RemBG},
+    'mouth_open': {
+        'InsightFace': predefined_mouth_open_InsightFace,
+        'SPIGA': predefined_mouth_open_SPIGA}
 }
