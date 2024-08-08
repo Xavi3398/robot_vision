@@ -3,7 +3,7 @@
 
 Módulo de visión para cualquier robot, presentado en el congreso INTERACCION'24: [*"An AI-Powered Computer Vision Module for Social Interactive Agents"*](https://doi.org/10.1145/3657242.3658601).
 
-Ver robot_vision/notebooks/Module Testing.ipynb para ver ejemplos de cómo usar las herramientas de visión.
+Ver [notebooks/Predefined.ipynb](notebooks/Predefined.ipynb) para ejemplos de cómo usar las herramientas de visión.
 
 
 ## Instalación
