@@ -1,7 +1,7 @@
 
 # Robot Vision
 
-Módulo de visión para cualquier robot, presentado en el congreso INTERACCION'24 (ver [publicación](https://doi.org/10.1145/3657242.3658601)).
+Módulo de visión para cualquier robot, presentado en el congreso INTERACCION'24: [*"An AI-Powered Computer Vision Module for Social Interactive Agents"*](https://doi.org/10.1145/3657242.3658601).
 
 Ver robot_vision/notebooks/Module Testing.ipynb para ver ejemplos de cómo usar las herramientas de visión.
 
@@ -140,3 +140,34 @@ Ejemplos:
 
 Ejemplos:
 ![Métodos de explicabilidad](./notebooks/resources/explanations.png)
+
+## Licencia
+Este proyecto está licenciado bajo los términos de la licencia MIT. Consulte el archivo [LICENSE](LICENSE) para más detalles.
+
+## Agradecimientos
+This work is part of the Project PID2022-136779OB-C32 (PLEISAR) funded by MICIU/ AEI /10.13039/501100011033/ and FEDER, EU. Project Playful Experiences with Interactive Social Agents and Robots (PLEISAR): Social Learning and Intergenerational Communication.
+
+Grant PID2019-104829RA-I00 funded by MCIN/ AEI /10.13039/501100011033. Project EXPLainable Artificial INtelligence systems for health and well-beING (EXPLAINING).
+
+F. X. Gaya-Morey was supported by an FPU scholarship from the Ministry of European Funds, University and Culture of the Government of the Balearic Islands.
+
+## Cita
+Si usa este código en su investigación, por favor cite nuestro artículo:
+
+```
+@inproceedings{gaya_morey2024ai,
+	title        = {An AI-Powered Computer Vision Module for Social Interactive Agents},
+	author       = {Gaya Morey, Francesc Xavier and Manresa-Yee, Cristina and Buades Rubio, Jose Maria},
+	year         = 2024,
+	booktitle    = {Proceedings of the XXIV International Conference on Human Computer Interaction},
+	location     = {A Coru\~{n}a, Spain},
+	publisher    = {Association for Computing Machinery},
+	address      = {New York, NY, USA},
+	series       = {Interacci\'{o}n '24},
+	doi          = {10.1145/3657242.3658601},
+	isbn         = 9798400717871,
+	articleno    = 19,
+	numpages     = 5
+}
+```
+
