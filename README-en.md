@@ -91,7 +91,7 @@ Recognition results are emitted, also via sockets, at:
 
 ## Available tasks and models
 
-| **Task**                   | **Year** | **Method**             | **Speed (imgs/s)** | **Accuracy**  | **Additional notes**                                                                    | **Implementation**                                              |
+| **Task**                   | **Year** | **Method**             | **Speed (imgs/s)** | **Accuracy**  | **Additional notes**                                                                    | **Implementation**                  |
 |------------------------|------|--------------------|----------------|-----------|-------------------------------------------------------------------------------------|-------------------------------------------------------------|
 | Face detection         | 2023 | YOLOv8             | 85.51          | Very Good |                                                                                     | [Official code](https://github.com/ultralytics/ultralytics) |
 |                        | 2021 | SCRFD              | 547.38         | Very Good |                                                                                     | [InsightFace](https://github.com/deepinsight/insightface)   |
@@ -105,9 +105,7 @@ Recognition results are emitted, also via sockets, at:
 |                        | 2016 | MTCNN              | 0.82           | Good      | **5 landmarks**: eye_left, eye_right, nose, mouth_left, mouth_right.                    | [TensorFlow](https://github.com/ipazc/mtcnn)                |
 |                        | 2014 | Regression Trees   | 56.88          | Good      | **68 landmarks**.                                                                       | [DLIB](http://dlib.net/python)                              |
 |                        | 2001 | Viola-Jones (eyes) | 10.19          | Fair      | **2 landmarks**: the eyes. Requires good choice of hyperparameters to get good results. | [OpenCV](https://docs.opencv.org/3.4)                       |
-| Age and gender         | 2023 | MiVOLO             | 10.78          | Very Good
-
- |                                                                                     | [Official code](https://github.com/WildChlamydia/MiVOLO)    |
+| Age and gender         | 2023 | MiVOLO             | 10.78          | Very Good |                                                                                     | [Official code](https://github.com/WildChlamydia/MiVOLO)    |
 |                        | 2017 | MobileNet          | 91.73          | Good      | Does not work for children.                                                         | [InsightFace](https://github.com/deepinsight/insightface)   |
 | Expression recognition | 2022 | SilNet             | 5.92           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
 |                        | 2021 | EfficientNetV2     | 4.99           | Very Good |                                                                                     | [Keras](https://keras.io/api/applications)                  |
