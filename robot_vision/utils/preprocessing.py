@@ -4,7 +4,52 @@ import math
 from scipy import ndimage
 import matplotlib.pyplot as plt
 
-class Preprocessing:
+class Preprocessor:
+
+    def __init__(self, img_size=150, grayscale=True, mode='reflect'):
+        self.img_size = img_size
+        self.grayscale = grayscale
+        self.mode = mode
+    
+    def preprocess(self, img, debug=False):
+        pass
+
+
+class BBoxPreprocessor(Preprocessor):
+
+    def __init__(self, img_size=150, grayscale=True, mode='reflect'):
+        super().__init__(img_size, grayscale, mode)
+
+    def preprocess(self, img, bbox, debug=False):
+        
+        # Crop
+        img = crop_img(img, bbox)
+
+        # To grayscale
+        if self.grayscale:
+            img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
+        else:
+            img_gray = img
+
+        # Resize
+        zoom = np.array([self.img_size, self.img_size]) / img_gray.shape[:2]
+        if self.grayscale:
+            img_gray = ndimage.zoom(img_gray, zoom, mode=self.mode)
+        else:
+            img_gray = ndimage.zoom(img_gray, (zoom[0], zoom[1], 1), mode=self.mode)
+        
+        # Normalize
+        img_gray = img_to_float(img_gray)
+        img_gray = histogram_stretching(img_gray)
+        img_gray = img_to_uint8(img_gray)
+
+        if debug:
+            img_gray = cv2.cvtColor(img_gray, cv2.COLOR_GRAY2BGR)
+
+        return img_gray
+
+
+class KeypointsPreprocessor(Preprocessor):
 
     EYE_L = 0
     EYE_R = 1
@@ -12,14 +57,10 @@ class Preprocessing:
     MOUTH_L = 3
     MOUTH_R = 4
 
-    def __init__(self, keypoints_detector, img_size=150, mode='reflect'):
-        self.img_size = img_size
-        self.mode = mode
-        self.keypoints_detector = keypoints_detector
+    def __init__(self, img_size=150, grayscale=True, mode='reflect'):
+        super().__init__(img_size, grayscale, mode)
 
-    def preprocess(self, img, debug=False):
-
-        keypoints = self.keypoints_detector.get_keypoints(img)
+    def preprocess(self, img, keypoints, debug=False):
 
         # Case where no face found
         if keypoints is None:
@@ -40,36 +81,69 @@ class Preprocessing:
             keypoints = [eyes_keypoints[0], eyes_keypoints[1], nose_keypoint, mouth_keypoints[0], mouth_keypoints[1]] 
 
         # To grayscale
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
+        if self.grayscale:
+            img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
+        else:
+            img_gray = img
 
         # Shift
         middle_point = (img.shape[1]//2, img.shape[0]//2)
-        img_gray = ndimage.shift(img_gray, (middle_point[1] - keypoints[Preprocessing.NOSE][1], middle_point[0] - keypoints[Preprocessing.NOSE][0]), mode=self.mode)
-        keypoints = translate_points(keypoints, (middle_point[0] - keypoints[Preprocessing.NOSE][0], middle_point[1] - keypoints[Preprocessing.NOSE][1]))
+        if self.grayscale:
+            img_gray = ndimage.shift(img_gray, (middle_point[1] - keypoints[KeypointsPreprocessor.NOSE][1], middle_point[0] - keypoints[KeypointsPreprocessor.NOSE][0]), mode=self.mode)
+        else:
+            img_gray = ndimage.shift(img_gray, (middle_point[1] - keypoints[KeypointsPreprocessor.NOSE][1], middle_point[0] - keypoints[KeypointsPreprocessor.NOSE][0], 0), mode=self.mode)
+        keypoints = translate_points(keypoints, (middle_point[0] - keypoints[KeypointsPreprocessor.NOSE][0], middle_point[1] - keypoints[KeypointsPreprocessor.NOSE][1]))
 
         # Rotate
-        angle = get_eye_rotation(keypoints[Preprocessing.EYE_L], keypoints[Preprocessing.EYE_R])
+        angle = get_eye_rotation(keypoints[KeypointsPreprocessor.EYE_L], keypoints[KeypointsPreprocessor.EYE_R])
         img_gray = ndimage.rotate(img_gray, radians_to_degrees(angle), reshape=False, mode=self.mode)
         keypoints = rotate_points(keypoints, angle, middle_point)
 
         # Crop
-        padding_h = (keypoints[Preprocessing.MOUTH_L][1] - keypoints[Preprocessing.EYE_L][1]) / 2
+        padding_h = np.linalg.norm(np.mean([keypoints[KeypointsPreprocessor.MOUTH_L], keypoints[KeypointsPreprocessor.MOUTH_R]], axis=0) - np.mean([keypoints[KeypointsPreprocessor.EYE_L], keypoints[KeypointsPreprocessor.EYE_R]], axis=0)) / 2
         height = width = int(4 * padding_h)
-        eye_d = keypoints[Preprocessing.EYE_R][0] - keypoints[Preprocessing.EYE_L][0]
+        eye_d = keypoints[KeypointsPreprocessor.EYE_R][0] - keypoints[KeypointsPreprocessor.EYE_L][0]
         padding_w = (width - eye_d) / 2
-        p1_x = int(keypoints[Preprocessing.EYE_L][0] - padding_w)
-        p1_y = int(keypoints[Preprocessing.EYE_L][1] - padding_h)
+        p1_x = int(keypoints[KeypointsPreprocessor.EYE_L][0] - padding_w)
+        p1_y = int(keypoints[KeypointsPreprocessor.EYE_L][1] - padding_h)
         p2_x = p1_x + width
         p2_y = p1_y + height
-        bbox = (p1_x, p1_y, p2_x, p2_y)
-        img_gray = crop_img(img_gray, bbox)
+
+        # Add borders if bbox is out of bounds
+        left = top = right = bottom = 0
+
+        if p1_x < 0:
+            left = -p1_x
+
+        if p1_y < 0:
+            top = -p1_y
+
+        if p2_x > img_gray.shape[1]:
+            right = p2_x - img_gray.shape[1]
+
+        if p2_y > img_gray.shape[0]:
+            bottom = p2_y - img_gray.shape[0]
+
+        if left > 0 or top > 0 or right > 0 or bottom > 0:
+            img_gray = cv2.copyMakeBorder(img_gray, top, bottom, left, right, cv2.BORDER_REFLECT_101)
+
+        # Update keypoints
+        bbox = (p1_x+left, p1_y+top, p2_x+left, p2_y+top)
         keypoints = translate_points(keypoints, (-p1_x, -p1_y))
 
-        # Resize
-        zoom = self.img_size / img_gray.shape[0]
-        img_gray = ndimage.zoom(img_gray, zoom, mode=self.mode)
-        keypoints = resize_points(keypoints, zoom)
+        # Crop
+        img_gray = crop_img(img_gray, bbox)
 
+        # Resize
+        zoom = np.array([self.img_size, self.img_size]) / img_gray.shape[:2]
+        if self.grayscale:
+            img_gray = ndimage.zoom(img_gray, zoom, mode=self.mode)
+        else:
+            img_gray = ndimage.zoom(img_gray, (zoom[0], zoom[1], 1), mode=self.mode)
+        
+        # Resize keypoints
+        keypoints = resize_points(keypoints, zoom)
+        
         # Normalize
         img_gray = img_to_float(img_gray)
         img_gray = histogram_stretching(img_gray)
@@ -79,7 +153,7 @@ class Preprocessing:
             img_gray = cv2.cvtColor(img_gray, cv2.COLOR_GRAY2BGR)
             for kp in keypoints:
                 cv2.circle(img_gray, (int(kp[0]), int(kp[1])), radius=int(self.img_size/30), color=(0,0,255), thickness=-1)
-                
+            
         return img_gray
 
 def get_eye_rotation(eye1, eye2):

@@ -15,7 +15,7 @@ import cv2
 
 from robot_vision.recognition.recognizer import Recognizer
 from robot_vision.utils.preprocessing import bbox_wh2xy
-from robot_vision.utils.plotting import draw_detections
+from robot_vision.utils.plotting import draw_detections_faces
 
 class Detector(Recognizer):
 
@@ -29,9 +29,9 @@ class Detector(Recognizer):
             img (_type_): image where to perform detection, in BGR.
 
         Returns:
-            np.ndarray: bounding box of the detection in the format [x0, y0, x1, y1], 
+            np.ndarray: list of bounding boxes of the detection in the format [x0, y0, x1, y1], 
             where (x0, y0) is the upper left point and (x1, y1) is the lower right point of the box. 
-            If various detections are found, only one is returned.
+            If various detections are found, all of them are returned.
         """
         pass
 
@@ -39,9 +39,8 @@ class Detector(Recognizer):
         return self.get_bbox(img)
 
     @staticmethod
-    def get_plot_result(img, result):
-        bbox = result
-        return draw_detections(img, bbox=bbox)
+    def get_plot_result(img, faces):
+        return draw_detections_faces(img, faces)
 
 
 class YOLODetector(Detector):
@@ -50,10 +49,7 @@ class YOLODetector(Detector):
     WebPage: https://docs.ultralytics.com/
     """
 
-
     def __init__(self, weights, det_class, conf=.4, iou=.7, half=True, verbose=False) -> None:
-        super().__init__()
-
         self.det_class = det_class
         self.yolo = YOLO(weights)
         self.yolo.fuse()
@@ -74,9 +70,12 @@ class YOLODetector(Detector):
         bboxes = yolo_pred.xyxy.numpy(force=True)
         
         if not self.det_class in classes:
-            return None
+            return []
         
-        return bboxes[np.where(classes == self.det_class)[0]][0].astype('int')
+        # return bboxes[np.where(classes == self.det_class)[0]][0].astype('int')
+        
+        bboxes = bboxes[np.where(classes == self.det_class)[0]].astype('int')
+        return [{'detection': bbox} for bbox in bboxes]
 
 
 class InsightFaceFaceDetector(Detector):
@@ -86,7 +85,6 @@ class InsightFaceFaceDetector(Detector):
     """
         
     def __init__(self, det_thresh=.5, det_size=(64, 64)) -> None:
-        super().__init__()
 
         self.app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'], allowed_modules=['detection'])
         self.app.prepare(ctx_id=0, det_thresh=det_thresh, det_size=det_size)
@@ -97,9 +95,11 @@ class InsightFaceFaceDetector(Detector):
 
         # No faces
         if len(faces) < 1:
-            return None
+            return []
             
-        return faces[0]['bbox']
+        # return faces[0]['bbox']
+        
+        return [{'detection': face['bbox']} for face in faces]
 
 
 class MTCNNFaceDetector(Detector):
@@ -117,8 +117,6 @@ class MTCNNFaceDetector(Detector):
         :param steps_threshold: step's thresholds values
         :param scale_factor: scale factor
         """
-        super().__init__()
-
         self.face_detector = mtcnn.MTCNN(weights_file, min_face_size, steps_threshold, scale_factor)
     
     def get_bbox(self, img: np.ndarray) -> np.ndarray:
@@ -127,10 +125,12 @@ class MTCNNFaceDetector(Detector):
 
         # No faces
         if len(faces) < 1:
-            return None
+            return []
 
-        face_wh = faces[0]['box']
-        return bbox_wh2xy(face_wh)
+        # face_wh = faces[0]['box']
+        # return bbox_wh2xy(face_wh)
+
+        return [{'detection': bbox_wh2xy(face['box'])} for face in faces]
 
 
 class ViolaJonesFaceDetector(Detector):
@@ -140,8 +140,6 @@ class ViolaJonesFaceDetector(Detector):
     """
 
     def __init__(self, xml_path, scaleFactor=1.1, minNeighors=3, minSize=None, maxSize=None) -> None:
-        super().__init__()
-        
         self.face_cascade = cv2.CascadeClassifier(xml_path)
         self.scaleFactor = scaleFactor
         self.minNeighors = minNeighors
@@ -155,10 +153,12 @@ class ViolaJonesFaceDetector(Detector):
 
         # No faces
         if len(faces) < 1:
-            return None
+            return []
 
-        face_wh = faces[0]
-        return bbox_wh2xy(face_wh)
+        # face_wh = faces[0]
+        # return bbox_wh2xy(face_wh)
+
+        return [{'detection': bbox_wh2xy(face)} for face in faces]
 
 
 class DLIBFaceDetector(Detector):
@@ -170,8 +170,6 @@ class DLIBFaceDetector(Detector):
     """
 
     def __init__(self) -> None:
-        super().__init__()
-
         self.detector = dlib.get_frontal_face_detector()
 
     
@@ -182,7 +180,9 @@ class DLIBFaceDetector(Detector):
 
         # No faces
         if len(faces) < 1:
-            return None
+            return []
 
-        face_wh = faces[0]
-        return np.array([face_wh.left(), face_wh.top(), face_wh.right(), face_wh.bottom()])
+        # face_wh = faces[0]
+        # return np.array([face_wh.left(), face_wh.top(), face_wh.right(), face_wh.bottom()])
+
+        return [{'detection': np.array([face.left(), face.top(), face.right(), face.bottom()])} for face in faces]

@@ -49,6 +49,49 @@ def getNetByName(model_name, n_classes=6):
     return model, image_size
 
 
+def getNetByNamePain(model_name, n_classes=6):
+    if model_name == 'SilNet':
+        model = SilNet(n_classes)
+        image_size = 150
+    elif  model_name == 'WeiNet':
+        model = WeiNet(n_classes)
+        image_size = 64
+    elif  model_name == 'AlexNet':
+        model = AlexNet(n_classes)
+        image_size = 224
+    elif  model_name == 'SongNet':
+        model = SongNet(n_classes)
+        image_size = 224
+    else:
+        image_size = 224
+        model = Sequential()
+        model.add(Input(shape=(image_size, image_size, 3)))
+        if  model_name == 'InceptionV3':
+            model.add(kapps.InceptionV3(weights='imagenet', include_top=False))
+        elif  model_name == 'VGG19':
+            model.add(kapps.VGG19(weights='imagenet', include_top=False))
+        elif  model_name == 'VGG16':
+            model.add(kapps.VGG16(weights='imagenet', include_top=False))
+        elif  model_name == 'ResNet50':
+            model.add(kapps.ResNet50(weights='imagenet', include_top=False))
+        elif  model_name == 'ResNet101V2':
+            model.add(kapps.ResNet101V2(weights='imagenet', include_top=False))
+        elif  model_name == 'Xception':
+            model.add(kapps.Xception(weights='imagenet', include_top=False))
+        elif  model_name == 'MobileNetV3Large':
+            model.add(kapps.MobileNetV3Large(weights='imagenet', include_top=False))
+        elif  model_name == 'EfficientNetV2B0':
+            model.add(kapps.EfficientNetV2B0(weights='imagenet', include_top=False))
+        elif  model_name == 'ConvNeXtTiny':
+            model.add(kapps.ConvNeXtTiny(weights='imagenet', include_top=False))
+
+        model.add(GlobalAveragePooling2D())
+        model.add(Dense(n_classes, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=1e-4), metrics=['accuracy'])
+
+    return model, image_size
+
+
 def AlexNet(n_classes=6):
     model = Sequential()
     model.add(Input(shape=(224, 224, 3)))

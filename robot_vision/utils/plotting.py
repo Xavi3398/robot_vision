@@ -41,36 +41,46 @@ def draw_text(img: np.ndarray, point, text, color=(255, 0, 0), color_bg=(255, 25
 
     return img
 
-def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None, expression=None, user_face=None, mouth_open=None):
+def draw_detections_faces(img: np.ndarray, faces):
+
+
+    for face in faces:
+
+        bbox = face['detection'] if 'detection' in face else None
+        kps = face['keypoints'] if 'keypoints' in face else None
+        age = face['age'] if 'age' in face else None
+        gender = face['gender'] if 'gender' in face else None
+        expression = face['expression'] if 'expression' in face else None
+        user_face = face['face_recognition'] if 'face_recognition' in face else None
+        mouth_open = face['mouth_open'] if 'mouth_open' in face else None
+        pain = face['pain'] if 'pain' in face else None
+
+        img = draw_detections(img, bbox=bbox, kps=kps, age=age, gender=gender, expression=expression, user_face=user_face, mouth_open=mouth_open, pain=pain)
+
+    return img
+
+def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None, expression=None, user_face=None, mouth_open=None, pain=None):
 
     font_factor = img.shape[1]/300
     point_factor = img.shape[1]//300
 
     # Recognition
     if user_face is not None:
-        
         img2 = cv2.imread(user_face)
 
+        bbox2 = bbox.copy().astype('int')
+        bbox2[0] = max(bbox2[0], 0)
+        bbox2[1] = max(bbox2[1], 0)
+        bbox2[2] = min(bbox2[2], img.shape[1])
+        bbox2[3] = min(bbox2[3], img.shape[0])
+
         # Zoom 2nd image to fit image dimensions
-        zoom = min([img.shape[0] / img2.shape[0], img.shape[1] / img2.shape[1]])
-        img2 = ndimage.zoom(img2, [zoom, zoom, 1])
-
-        # Add black padding
-        aux = np.zeros(shape=img.shape, dtype='uint8')
-        aux[:min([img2.shape[0], img.shape[0]]),:min([img2.shape[1], img.shape[1]]),:] = img2[:min([img2.shape[0], img.shape[0]]),:min([img2.shape[1], img.shape[1]]),:]
-        img = aux
-
-        # # Add padding to smaller image
-        # if img2.shape[0] < img.shape[0]:
-        #     aux = np.zeros(shape=[img.shape[0], img2.shape[1], img.shape[2]], dtype='uint8')
-        #     aux[:img2.shape[0], :img2.shape[1], :img2.shape[2]] = img2
-        #     img2 = aux
-        # elif img2.shape[0] > img.shape[0]:
-        #     aux = np.zeros(shape=[img2.shape[0], img.shape[1], img2.shape[2]], dtype='uint8')
-        #     aux[:img.shape[0], :img.shape[1], :img.shape[2]] = img
-        #     img = aux
-
-        # img = cv2.hconcat([img, img2])
+        zoom_x = (bbox2[2] - bbox2[0])/img2.shape[1]
+        zoom_y = (bbox2[3] - bbox2[1])/img2.shape[0]
+        img2 = ndimage.zoom(img2, [zoom_y, zoom_x, 1])
+        
+        # Paste 2nd image in bbox of 1st image
+        img[bbox2[1]:bbox2[3], bbox2[0]:bbox2[2]] = img2
     
     # BGR to RGB
     img = copy.deepcopy(img[:,:,::-1])
@@ -84,10 +94,10 @@ def draw_detections(img: np.ndarray, bbox=None, kps=None, age=None, gender=None,
         img = draw_keypoints(img, kps)
     
     # Age & Gender
-    if age is not None or gender is not None or expression is not None:
+    if age is not None or gender is not None or expression is not None or pain is not None:
 
         elements = []
-        for element in [age, gender, expression]:
+        for element in [age, gender, expression, pain]:
             if element is not None:
                 elements.append(element)
         

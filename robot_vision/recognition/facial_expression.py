@@ -1,9 +1,10 @@
 import numpy as np
 import cv2
 
-from robot_vision.utils.preprocessing import bbox_wh2xy, Preprocessing
-from robot_vision.utils.plotting import draw_detections
+from robot_vision.utils.preprocessing import bbox_wh2xy, BBoxPreprocessor, KeypointsPreprocessor
+from robot_vision.utils.plotting import draw_detections_faces
 from robot_vision.utils import nets
+from robot_vision.recognition.detection import Detector
 from robot_vision.recognition.keypoints import Keypoints
 from robot_vision.recognition.recognizer import Recognizer
 
@@ -17,36 +18,24 @@ class FacialExpressionRecognizer(Recognizer):
         pass
 
     def get_facial_expression(self, img) -> str:
-        """Find bounding box of target class in image.
-
-        Args:
-            img (_type_): image where to perform detection, in BGR.
-
-        Returns:
-            np.ndarray: bounding box of the detection in the format [x0, y0, x1, y1], 
-            where (x0, y0) is the upper left point and (x1, y1) is the lower right point of the box. 
-            If various detections are found, only one is returned.
-        """
         pass
 
     def get_result(self, img):
         return self.get_facial_expression(img)
 
     @staticmethod
-    def get_plot_result(img, result):
-        expression = result
-        return draw_detections(img, expression=expression)
+    def get_plot_result(img, faces):
+        return draw_detections_faces(img, faces)
 
 
 class KerasFacialExpressionRecognizer(FacialExpressionRecognizer):
-    """
-    """
 
     MODEL_NAMES = ['SilNet', 'WeiNet', 'AlexNet', 'SongNet', 'InceptionV3',
                     'VGG19', 'VGG16', 'ResNet50', 'ResNet101V2', 'Xception',
                     'MobileNetV3Large', 'EfficientNetV2B0']
 
-    def __init__(self, model_name, weights, keypoints_detector: Keypoints) -> None:
+    def __init__(self, model_name, weights, face_detector: Detector = None, keypoints_detector: Keypoints = None,
+            preprocessing_grayscale=True, preprocessing_mode='reflect') -> None:
         super().__init__()
 
         if model_name not in KerasFacialExpressionRecognizer.MODEL_NAMES:
@@ -55,8 +44,14 @@ class KerasFacialExpressionRecognizer(FacialExpressionRecognizer):
         self.model, self.img_size = nets.getNetByName(model_name)
         self.model.load_weights(weights)
 
-        if keypoints_detector is not None:
-            self.preprocessor = Preprocessing(keypoints_detector=keypoints_detector, img_size=self.img_size)
+        if face_detector is not None:
+            self.detector = face_detector
+            self.detector_key = 'detection'
+            self.preprocessor = BBoxPreprocessor(img_size=self.img_size, grayscale=preprocessing_grayscale, mode=preprocessing_mode)
+        elif keypoints_detector is not None:
+            self.detector = keypoints_detector
+            self.detector_key = 'keypoints'
+            self.preprocessor = KeypointsPreprocessor(img_size=self.img_size, grayscale=preprocessing_grayscale, mode=preprocessing_mode)
         else:
             self.preprocessor = None
 
@@ -64,35 +59,67 @@ class KerasFacialExpressionRecognizer(FacialExpressionRecognizer):
         
         # Preprocess image
         if self.preprocessor is not None:
-            img = self.preprocessor.preprocess(img)
+            faces = self.detector.get_result(img)
+        else:
+            faces = [None]
         
         # Case where no face found
-        if img is None:
-            return None
+        if len(faces) < 1:
+            return []
 
-        # Convert to RGB if necessary
-        if len(img.shape) < 3 or img.shape[2] < 3:
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        results = []
 
-        # Get prediction
-        predictions = self.model.predict(np.array([img]))[0]
+        for face in faces:
 
-        # Get expression
-        return FacialExpressionRecognizer.FACIAL_EXPRESSIONS[np.argmax(predictions)]
+            # Preprocess image
+            if self.preprocessor is not None:
+                img = self.preprocessor.preprocess(img, face[self.detector_key])
+        
+            # Case where no face found
+            if img is None:
+                continue
+
+            # Convert to RGB if necessary
+            if len(img.shape) < 3 or img.shape[2] < 3:
+                img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
+            # Get prediction
+            predictions = self.model.predict(np.array([img]))[0]
+
+            # Get expression
+            results.append({**face, 'expression': FacialExpressionRecognizer.FACIAL_EXPRESSIONS[np.argmax(predictions)]})
+
+        return results
     
     def get_explanation(self, img, explainer_fn, label=None):
         
         # Preprocess image
         if self.preprocessor is not None:
-            img = self.preprocessor.preprocess(img)
+            faces = self.detector.get_result(img)
+        else:
+            faces = [None]
         
         # Case where no face found
-        if img is None:
-            return None
+        if len(faces) < 1:
+            return []
 
-        # Convert to RGB if necessary
-        if len(img.shape) < 3 or img.shape[2] < 3:
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        results = []
+
+        for face in faces:
+
+            # Preprocess image
+            if self.preprocessor is not None:
+                img = self.preprocessor.preprocess(img, face[self.detector_key])
         
-        # Get explanation
-        return explainer_fn(img, self.model, label)
+            # Case where no face found
+            if img is None:
+                continue
+
+            # Convert to RGB if necessary
+            if len(img.shape) < 3 or img.shape[2] < 3:
+                img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+            
+            # Get explanation
+            results.append(explainer_fn(img, self.model, label))
+        
+        return results

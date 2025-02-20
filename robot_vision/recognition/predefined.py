@@ -4,9 +4,11 @@ from robot_vision.recognition import background_subtraction
 from robot_vision.recognition import age_gender
 from robot_vision.recognition import keypoints
 from robot_vision.recognition import facial_expression
+from robot_vision.recognition import pain
 from robot_vision.recognition import mouth_open
 
 import os
+from functools import partial
 
 MODELS_FOLDER = 'robot_vision/models'
 USER_FACES_FOLDER = 'robot_vision/user_faces'
@@ -69,6 +71,7 @@ def predefined_keypoints_MTCNN():
 
 def predefined_keypoints_ViolaJones():
     return keypoints.ViolaJonesKeypoints(
+            face_detector=predefined_face_detection_ViolaJones(),
             xml_path=os.path.join(MODELS_FOLDER, 'haarcascade_eye.xml'))
 
 def predefined_keypoints_DLIB():
@@ -119,6 +122,48 @@ def predefined_facial_expression_recognition_MobileNetV3Large():
 def predefined_facial_expression_recognition_EfficientNetV2B0():
     return predefined_facial_expression_recognition_Keras('EfficientNetV2B0')
 
+# PAIN RECOGNITION
+def predefined_pain_recognition_Keras(model_name):
+    return pain.KerasPainRecognizer(
+            model_name=model_name,
+            weights=os.path.join(MODELS_FOLDER, 'pain_recognition', model_name+'_PAIN-BD3-ALL-0_weights.h5'),
+            keypoints_detector=keypoints.InsightFaceKeypoints(mode='5'))
+
+def predefined_pain_recognition_AlexNet():
+    return predefined_pain_recognition_Keras('AlexNet')
+
+def predefined_pain_recognition_SilNet():
+    return predefined_pain_recognition_Keras('SilNet')
+
+def predefined_pain_recognition_SongNet():
+    return predefined_pain_recognition_Keras('SongNet')
+
+def predefined_pain_recognition_WeiNet():
+    return predefined_pain_recognition_Keras('WeiNet')
+
+def predefined_pain_recognition_ResNet50():
+    return predefined_pain_recognition_Keras('ResNet50')
+
+def predefined_pain_recognition_ResNet101V2():
+    return predefined_pain_recognition_Keras('ResNet101V2')
+
+def predefined_pain_recognition_VGG16():
+    return predefined_pain_recognition_Keras('VGG16')
+
+def predefined_pain_recognition_VGG19():
+    return predefined_pain_recognition_Keras('VGG19')
+
+def predefined_pain_recognition_Xception():
+    return predefined_pain_recognition_Keras('Xception')
+
+def predefined_pain_recognition_InceptionV3():
+    return predefined_pain_recognition_Keras('InceptionV3')
+
+def predefined_pain_recognition_MobileNetV3Large():
+    return predefined_pain_recognition_Keras('MobileNetV3Large')
+
+def predefined_pain_recognition_EfficientNetV2B0():
+    return predefined_pain_recognition_Keras('EfficientNetV2B0')
 
 # AGE & GENDER ESTIMATION
 def predefined_age_gender_MiVOLO():
@@ -176,6 +221,20 @@ PREDEFINED_RECOGNIZERS = {
         'InceptionV3': predefined_facial_expression_recognition_InceptionV3,
         'MobileNetV3Large': predefined_facial_expression_recognition_MobileNetV3Large,
         'EfficientNetV2B0': predefined_facial_expression_recognition_EfficientNetV2B0},
+    'pain': {
+        'AlexNet': predefined_pain_recognition_AlexNet,
+        'SilNet': predefined_pain_recognition_SilNet,
+        'SongNet': predefined_pain_recognition_SongNet,
+        'WeiNet': predefined_pain_recognition_WeiNet,
+        'ResNet50': predefined_pain_recognition_ResNet50,
+        'ResNet101V2': predefined_pain_recognition_ResNet101V2,
+        'VGG16': predefined_pain_recognition_VGG16,
+        'VGG19': predefined_pain_recognition_VGG19,
+        'Xception': predefined_pain_recognition_Xception,
+        'InceptionV3': predefined_pain_recognition_InceptionV3,
+        # 'MobileNetV3Large': predefined_pain_recognition_MobileNetV3Large,
+        # 'EfficientNetV2B0': predefined_pain_recognition_EfficientNetV2B0
+        },
     'age_gender': {
         'MiVOLO': predefined_age_gender_MiVOLO,
         'InsightFace': predefined_age_gender_InsightFace},

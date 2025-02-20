@@ -6,7 +6,7 @@ import cv2
 from scipy.spatial import distance
 
 from robot_vision.recognition.recognizer import Recognizer
-from robot_vision.utils.plotting import draw_detections
+from robot_vision.utils.plotting import draw_detections_faces
 
 class FacialRecognition(Recognizer):
 
@@ -24,7 +24,8 @@ class FacialRecognition(Recognizer):
         
         for img_path in img_paths:
             img = cv2.imread(img_path)
-            features = self.get_features(img)
+
+            features = self.get_features(img)[0]['face_recognition']
 
             if features is None:
                 print('Error initializing faces.')
@@ -43,14 +44,18 @@ class FacialRecognition(Recognizer):
         Returns:
             id (int): index of the recocognized identity.
         """
-        features = self.get_features(img)
+        faces = self.get_features(img)
 
         # Case where no face found
-        if features is None:
-            return None
-
-        distances = [self.distance_fn(features, id['features']) for id in self.rec_ids]
-        return self.rec_ids[np.argmin(distances)]['img_path']
+        if len(faces) < 1:
+            return []
+        
+        for face in faces:
+            features = face['face_recognition']
+            distances = [self.distance_fn(features, id['features']) for id in self.rec_ids]
+            face['face_recognition'] = self.rec_ids[np.argmin(distances)]['img_path']
+        
+        return faces
 
     def get_features(self, img) -> np.ndarray:
         """Find features in image. Depending on the method, a face detector is needed.
@@ -67,9 +72,8 @@ class FacialRecognition(Recognizer):
         return self.recognize(img)
 
     @staticmethod
-    def get_plot_result(img, result):
-        user_face = result
-        return draw_detections(img, user_face=user_face)
+    def get_plot_result(img, faces):
+        return draw_detections_faces(img, faces)
 
 
 class InsightFaceRecognition(FacialRecognition):
@@ -92,6 +96,11 @@ class InsightFaceRecognition(FacialRecognition):
 
         # No faces
         if len(faces) < 1:
-            return None
+            return []
+        
+        results = []
 
-        return faces[0]['embedding']
+        for face in faces:
+            results.append({'detection': face['bbox'], 'face_recognition': face['embedding']})
+
+        return results

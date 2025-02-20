@@ -5,7 +5,6 @@ import numpy as np
 import cv2
 
 from robot_vision.recognition.recognizer import Recognizer
-from robot_vision.utils.plotting import draw_detections
 
 class BackgroundSubtractor(Recognizer):
 
@@ -30,8 +29,7 @@ class BackgroundSubtractor(Recognizer):
 
     @staticmethod
     def get_plot_result(img, result):
-        background_subtraction = result
-        return draw_detections(background_subtraction)
+        return result
 
 class RemBGBackgroundSubtractor(BackgroundSubtractor):
 

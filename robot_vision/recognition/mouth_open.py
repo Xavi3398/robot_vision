@@ -18,8 +18,8 @@ from skimage import transform
 
 from robot_vision.recognition.detection import Detector
 from robot_vision.recognition.recognizer import Recognizer
-from robot_vision.utils.preprocessing import bbox_xy2wh, crop_img
-from robot_vision.utils.plotting import draw_detections
+from robot_vision.utils.preprocessing import bbox_xy2wh
+from robot_vision.utils.plotting import draw_detections_faces
 
 
 class MouthOpen(Recognizer):
@@ -87,8 +87,8 @@ class MouthOpen(Recognizer):
         return self.get_mouth_open(img)
 
     @staticmethod
-    def get_plot_result(img, result):
-        return draw_detections(img, mouth_open=result)
+    def get_plot_result(img, faces):
+        return draw_detections_faces(img, faces)
 
 
 class InsightFaceMouthOpen(MouthOpen):
@@ -170,19 +170,25 @@ class InsightFaceMouthOpen(MouthOpen):
         if len(faces) < 1:
             return None
         
-        # 2D keypoints
-        if self.mode == '2d':
-            keypoints = faces[0]['landmark_2d_106']
-        
-        # 3D keypoints
-        elif self.mode == '3d':
-            keypoints = faces[0]['landmark_3d_68']
+        results = []
 
-        # Invalid mode
-        else:
-            raise KeyError(self.mode + ' is not a valid mode. Available modes: ' + str(MouthOpen.MODES))
+        for face in faces:
         
-        return self.get_mouth_open_aux(keypoints, self.eye_l, self.eye_r, self.mouth_t, self.mouth_b, self.ear_l, self.ear_r)
+            # 2D keypoints
+            if self.mode == '2d':
+                keypoints = face['landmark_2d_106']
+            
+            # 3D keypoints
+            elif self.mode == '3d':
+                keypoints = face['landmark_3d_68']
+
+            # Invalid mode
+            else:
+                raise KeyError(self.mode + ' is not a valid mode. Available modes: ' + str(MouthOpen.MODES))
+            
+            results.append({'detection': face['bbox'], 'keypoints': keypoints, 'mouth_open': self.get_mouth_open_aux(keypoints, self.eye_l, self.eye_r, self.mouth_t, self.mouth_b, self.ear_l, self.ear_r)})
+
+        return results
 
 
 class SPIGAMouthOpen(MouthOpen):
@@ -235,16 +241,22 @@ class SPIGAMouthOpen(MouthOpen):
     def get_mouth_open(self, img: np.ndarray):
 
         # Detect faces
-        face_bbox = self.face_detector.get_bbox(img)
-        face_bbox = bbox_xy2wh(face_bbox)
+        faces = self.face_detector.get_result(img)
 
         # No faces
-        if face_bbox is None:
-            print('No faces detected')
-            return None
+        if len(faces) < 1:
+            return []
+        
+        results = []
 
-        # Get keypoints
-        features = self.processor.inference(img, [face_bbox])
-        keypoints = np.array(features['landmarks'][0])
+        for face in faces:
+            face_bbox = face['detection']
+            face_bbox = bbox_xy2wh(face_bbox)
 
-        return self.get_mouth_open_aux(keypoints, self.eye_l, self.eye_r, self.mouth_t, self.mouth_b, self.ear_l, self.ear_r)
+            # Get keypoints
+            features = self.processor.inference(img, [face_bbox])
+            keypoints = np.array(features['landmarks'][0])
+
+            results.append({'detection': face['detection'], 'keypoints': keypoints, 'mouth_open': self.get_mouth_open_aux(keypoints, self.eye_l, self.eye_r, self.mouth_t, self.mouth_b, self.ear_l, self.ear_r)})
+            
+        return results

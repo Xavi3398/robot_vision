@@ -5,7 +5,8 @@ from insightface.app import FaceAnalysis
 from mivolo.predictor import Predictor
 
 from robot_vision.recognition.recognizer import Recognizer
-from robot_vision.utils.plotting import draw_detections
+from robot_vision.utils.plotting import draw_detections_faces
+from robot_vision.utils.preprocessing import crop_img
 
 import numpy as np
 import copy
@@ -34,9 +35,8 @@ class AgeGender(Recognizer):
         return self.get_age_gender(img)
 
     @staticmethod
-    def get_plot_result(img, result):
-        age, gender = result
-        return draw_detections(img, age=age, gender=gender)
+    def get_plot_result(img, faces):
+        return draw_detections_faces(img, faces)
 
 
 class InsightFaceAgeGender(AgeGender):
@@ -57,11 +57,16 @@ class InsightFaceAgeGender(AgeGender):
 
         # No faces
         if len(faces) < 1:
-            return None
+            return []
+        
+        results = []
+        
+        for face in faces:
+            results.append({'detection': face['bbox'], 'age': round(face['age']), 'gender': AgeGender.GENDERS[face['gender']]})
 
-        return round(faces[0]['age']), AgeGender.GENDERS[faces[0]['gender']]
+        return results
     
-    def get_explanation(self, img, explainer_fn, label=None, mode='gender', face_bbox=None, num_samples=1000):
+    def get_explanation(self, img, explainer_fn, label=None, mode='gender', num_samples=1000):
         """Get explanation for the prediction.
 
         Args:
@@ -69,7 +74,6 @@ class InsightFaceAgeGender(AgeGender):
             explainer_fn (function): explainer function to call, receiving the image, the prediction function, the label and the number of samples.
             label (int, optional): class to explain. If None, class with highest prediction confidence explained. Defaults to None.
             mode (str, optional): Whether to explain age or gender. Currently, only 'gender' supported. Defaults to 'gender'.
-            face_bbox (1d numpy array, optional): If provided, perturbations only made in the delimited region. Defaults to None.
             num_samples (int, optional): Number of perturbed samples to use for explanation. Defaults to 1000.
 
         Raises:
@@ -79,29 +83,30 @@ class InsightFaceAgeGender(AgeGender):
             3d numpy array: RGB explanation image
         """
 
-        if face_bbox is None:
-            face_img = img
-        else:
-            face_img = img[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
+        faces = self.app.get(img)
+
+        results = []
+
+        for face in faces:
+
+            face_bbox = face['bbox']
+
+            face_img = crop_img(img, face_bbox)
+            
+            # Get explanation
+            if mode == 'gender':
+                results.append(explainer_fn(face_img, self.pred_fn, label, num_samples=num_samples))
+            else:
+                raise ValueError('Mode not supported.')
         
-        # Get explanation
-        if mode == 'gender':
-            self.bbox = face_bbox
-            self.img = img
-            return explainer_fn(face_img, self.pred_fn, label, num_samples=num_samples)
-        else:
-            raise ValueError('Mode not supported.')
+        return results
         
     def pred_fn(self, imgs):
         
         res = []
         for i in range(imgs.shape[0]):
 
-            if self.bbox is None:
-                img = imgs[i,...]
-            else:
-                img = copy.deepcopy(self.img)
-                img[self.bbox[1]:self.bbox[3], self.bbox[0]:self.bbox[2]] = imgs[i,...]
+            img = imgs[i,...]
 
             faces = self.app.get(img)
 
@@ -144,13 +149,16 @@ class MiVOLOAgeGender(AgeGender):
 
         detected_objects, _ = self.predictor.recognize(img)
 
+        yolo_pred = detected_objects.yolo_results.boxes
+        bboxes = yolo_pred.xyxy.numpy(force=True).astype('int')
+
         # No faces
         if detected_objects.n_faces + detected_objects.n_persons < 1:
-            return None
-
-        return round(detected_objects.ages[0]), detected_objects.genders[0]
+            return []
+        
+        return [{'detection': bbox, 'age': round(age), 'gender': gender} for bbox, age, gender in zip(bboxes, detected_objects.ages, detected_objects.genders)]
     
-    def get_explanation(self, img, explainer_fn, label=None, mode='gender', face_bbox=None):
+    def get_explanation(self, img, explainer_fn, label=None, mode='gender'):
         """Get explanation for the prediction.
 
         Args:
@@ -168,31 +176,32 @@ class MiVOLOAgeGender(AgeGender):
             3d numpy array: RGB explanation image
         """
 
-        if face_bbox is None:
-            face_img = img
-        else:
-            face_img = img[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
+        detected_objects, _ = self.predictor.recognize(img)
+
+        yolo_pred = detected_objects.yolo_results.boxes
+        bboxes = yolo_pred.xyxy.numpy(force=True).astype('int')
+
+        results = []
+
+        for face_bbox in bboxes:
+
+            face_img = crop_img(img, face_bbox)
+            
+            # Get explanation
+            if mode == 'gender':
+                self.predictions = self.predictor.detector.predict(img)
+                results.append(explainer_fn(face_img, self.pred_fn, label))
+            else:
+                raise ValueError('Mode not supported.')
         
-        # Get explanation
-        if mode == 'gender':
-            self.bbox = face_bbox
-            self.img = img
-            self.predictions = self.predictor.detector.predict(img)
-            return explainer_fn(face_img, self.pred_fn, label)
-        else:
-            raise ValueError('Mode not supported.')
+        return results
         
     def pred_fn(self, imgs):
         
         res = []
         for i in range(imgs.shape[0]):
 
-            if self.bbox is None:
-                img = imgs[i,...]
-            else:
-                img = copy.deepcopy(self.img)
-                img[self.bbox[1]:self.bbox[3], self.bbox[0]:self.bbox[2]] = imgs[i,...]
-
+            img = imgs[i,...]
             self.predictor.age_gender_model.predict(img, self.predictions)
             
             # Find index of element in list
